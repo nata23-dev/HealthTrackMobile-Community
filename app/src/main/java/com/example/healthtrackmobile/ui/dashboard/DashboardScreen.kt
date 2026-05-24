@@ -39,6 +39,7 @@ fun DashboardScreen(
     onAddMetricClick: () -> Unit,
     onProfileClick: () -> Unit,
     onDirectoryClick: () -> Unit,
+    onCitasClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel()
 ) {
@@ -72,6 +73,13 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onCitasClick) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Citas Médicas",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(onClick = onDirectoryClick) {
                         Icon(
                             imageVector = Icons.Default.LocalHospital,

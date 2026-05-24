@@ -15,6 +15,7 @@ import com.example.healthtrackmobile.ui.login.LoginScreen
 import com.example.healthtrackmobile.ui.metricas.AgregarMetricaScreen
 import com.example.healthtrackmobile.ui.perfil.PerfilClinicoScreen
 import com.example.healthtrackmobile.ui.directorio.DirectorioMedicoScreen
+import com.example.healthtrackmobile.ui.citas.CitasScreen
 import com.example.healthtrackmobile.util.SessionManager
 import kotlinx.coroutines.launch
 
@@ -59,6 +60,9 @@ fun MainNavigation() {
             onDirectoryClick = {
               backStack.add(DirectorioMedico)
             },
+            onCitasClick = {
+              backStack.add(CitasMedicas(userId = mainKey.userId, userName = mainKey.userName))
+            },
             modifier = Modifier.safeDrawingPadding()
           )
         }
@@ -82,6 +86,16 @@ fun MainNavigation() {
         }
         entry<DirectorioMedico> {
           DirectorioMedicoScreen(
+            onNavigateBack = {
+              backStack.removeLastOrNull()
+            },
+            modifier = Modifier.safeDrawingPadding()
+          )
+        }
+        entry<CitasMedicas> { key ->
+          CitasScreen(
+            userId = key.userId,
+            userName = key.userName,
             onNavigateBack = {
               backStack.removeLastOrNull()
             },
