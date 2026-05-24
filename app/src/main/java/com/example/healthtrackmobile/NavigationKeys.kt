@@ -9,5 +9,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class PerfilClinico(val userId: String) : NavKey
 @Serializable data object DirectorioMedico : NavKey
 @Serializable data class CitasMedicas(val userId: String, val userName: String) : NavKey
+@Serializable data class PrevencionIA(val userId: String) : NavKey
 
 

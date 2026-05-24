@@ -40,6 +40,7 @@ fun DashboardScreen(
     onProfileClick: () -> Unit,
     onDirectoryClick: () -> Unit,
     onCitasClick: () -> Unit,
+    onPrevencionClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel()
 ) {
@@ -73,6 +74,13 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onPrevencionClick) {
+                        Icon(
+                            imageVector = Icons.Default.Psychology,
+                            contentDescription = "Prevención IA",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(onClick = onCitasClick) {
                         Icon(
                             imageVector = Icons.Default.DateRange,
