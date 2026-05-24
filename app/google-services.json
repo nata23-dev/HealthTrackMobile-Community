@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "823595232935",
+    "project_id": "healthtrack-community-e5817",
+    "storage_bucket": "healthtrack-community-e5817.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:823595232935:android:153707476c9ab9e7127582",
+        "android_client_info": {
+          "package_name": "com.example.healthtrackmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzbWZKuonZyKOziYUgepLlXGVHUPH6DWU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
