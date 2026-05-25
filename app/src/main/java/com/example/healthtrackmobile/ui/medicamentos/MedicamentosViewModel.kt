@@ -49,11 +49,30 @@ class MedicamentosViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    db.collection("recordatorios_medicamentos").add(recordatorio).await()
+                    // Usar recordatorio.id (UUID) como ID del documento para evitar duplicidades de alarma
+                    db.collection("recordatorios_medicamentos").document(recordatorio.id)
+                        .set(recordatorio).await()
                     // Programar alarma local
                     com.example.healthtrackmobile.receiver.ReminderScheduler.scheduleReminder(context, recordatorio)
                 }
                 cargarRecordatorios(recordatorio.pacienteId ?: "")
+            } catch (e: Exception) {
+                // Manejar error
+            }
+        }
+    }
+
+    fun eliminarRecordatorio(context: android.content.Context, reminderId: String, userId: String) {
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Cambiar el estado del recordatorio a inactivo en Firestore
+                    db.collection("recordatorios_medicamentos").document(reminderId)
+                        .update("estado", "inactivo").await()
+                    // Cancelar la alarma exacta
+                    com.example.healthtrackmobile.receiver.ReminderScheduler.cancelReminder(context, reminderId)
+                }
+                cargarRecordatorios(userId)
             } catch (e: Exception) {
                 // Manejar error
             }

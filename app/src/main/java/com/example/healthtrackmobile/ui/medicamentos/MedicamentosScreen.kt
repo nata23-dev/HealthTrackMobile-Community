@@ -45,6 +45,7 @@ fun MedicamentosScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
+    var reminderToDelete by remember { mutableStateOf<RecordatorioMedicamento?>(null) }
     val context = LocalContext.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -130,12 +131,39 @@ fun MedicamentosScreen(
                             onAvisarToma = {
                                 val mensaje = "Hola, acabo de registrar la toma de mi medicamento: ${recordatorio.medicamento} (${recordatorio.dosis})"
                                 WhatsAppShareUtils.compartirPorWhatsApp(context, mensaje)
+                            },
+                            onDelete = {
+                                reminderToDelete = recordatorio
                             }
                         )
                     }
                 }
             }
         }
+    }
+
+    reminderToDelete?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = { reminderToDelete = null },
+            title = { Text("Cancelar Recordatorio", color = Guinda4T, fontWeight = FontWeight.Bold) },
+            text = { Text("¿Está seguro de que desea suspender y eliminar el recordatorio de ${reminder.medicamento}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarRecordatorio(context, reminder.id, userId)
+                        reminderToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Guinda4T)
+                ) {
+                    Text("Eliminar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reminderToDelete = null }) {
+                    Text("Cancelar", color = Guinda4T)
+                }
+            }
+        )
     }
 
     if (showDialog) {
@@ -164,7 +192,8 @@ fun MedicamentosScreen(
 @Composable
 fun MedicamentoItem(
     recordatorio: RecordatorioMedicamento,
-    onAvisarToma: () -> Unit
+    onAvisarToma: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -212,6 +241,18 @@ fun MedicamentoItem(
                     Icon(Icons.Default.AccessTime, null, tint = Dorado4T, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(recordatorio.horaRecordatorio ?: "--:--", fontWeight = FontWeight.Bold, color = Guinda4T)
+                }
+                Spacer(Modifier.height(8.dp))
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar recordatorio",
+                        tint = Color.Red.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
