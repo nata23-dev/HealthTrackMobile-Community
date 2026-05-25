@@ -61,7 +61,7 @@ class DashboardViewModel : ViewModel() {
                 val data = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     // 1. Cargar todas las métricas del paciente para filtrar en memoria
                     val metricasSnapshot = db.collection("metricas")
-                        .whereEqualTo("pacienteId", userId)
+                        .whereEqualTo("paciente_id", userId)
                         .get()
                         .await()
 

@@ -41,6 +41,7 @@ fun ConfiguracionInicialScreen(
     val scope = rememberCoroutineScope()
     var fechaNac by rememberSaveable { mutableStateOf("") }
     var estatura by rememberSaveable { mutableStateOf("") }
+    var peso by rememberSaveable { mutableStateOf("") }
     var grupoSanguineo by rememberSaveable { mutableStateOf("") }
     var alergias by rememberSaveable { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -49,8 +50,11 @@ fun ConfiguracionInicialScreen(
     val gruposSanguineos = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
     val context = LocalContext.current
 
-    val isValid = remember(fechaNac, estatura, grupoSanguineo) {
-        fechaNac.isNotEmpty() && estatura.toDoubleOrNull() != null && grupoSanguineo.isNotEmpty()
+    val isValid = remember(fechaNac, estatura, peso, grupoSanguineo) {
+        fechaNac.isNotEmpty() &&
+                estatura.toDoubleOrNull() != null &&
+                peso.toDoubleOrNull() != null &&
+                grupoSanguineo.isNotEmpty()
     }
 
     Scaffold(
@@ -123,6 +127,14 @@ fun ConfiguracionInicialScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
+            OutlinedTextField(
+                value = peso,
+                onValueChange = { peso = it },
+                label = { Text("Peso Inicial (kg)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+
             // Selector nativo (Dropdown) de Grupo Sanguíneo
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
@@ -180,9 +192,21 @@ fun ConfiguracionInicialScreen(
                                     fechaNacimiento = fechaNac,
                                     estatura = estatura.toDoubleOrNull() ?: 0.0,
                                     grupoSanguineo = grupoSanguineo,
-                                    alergias = alergias
+                                    alergias = alergias,
+                                    pesoInicial = peso.toDoubleOrNull() ?: 0.0
                                 )
                                 db.collection("perfiles_pacientes").document(userId).set(perfil).await()
+
+                                // Registrar primera métrica de peso para el cálculo de IMC y gráficos
+                                val metricaPeso = com.example.healthtrackmobile.model.Metrica(
+                                    pacienteId = userId,
+                                    tipo = "PESO",
+                                    valor = peso.toDoubleOrNull() ?: 0.0,
+                                    timestamp = System.currentTimeMillis(),
+                                    comentario = "Registro inicial durante configuración de cuenta"
+                                )
+                                db.collection("metricas").add(metricaPeso).await()
+
                                 onFinished()
                             } catch (e: Exception) {
                                 isLoading = false

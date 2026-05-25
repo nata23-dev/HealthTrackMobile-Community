@@ -58,7 +58,7 @@ class ReportesViewModel : ViewModel() {
                     val perfil = perfilDoc.toObject(PerfilPaciente::class.java)
 
                     val metricasSnapshot = db.collection("metricas")
-                        .whereEqualTo("pacienteId", userId)
+                        .whereEqualTo("paciente_id", userId)
                         .get()
                         .await()
                     

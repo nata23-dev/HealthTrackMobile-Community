@@ -87,12 +87,12 @@ class PerfilClinicoViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val datos = hashMapOf(
-                    "grupoSanguineo" to grupoSanguineo.trim().ifBlank { null },
+                    "grupo_sanguineo" to grupoSanguineo.trim().ifBlank { null },
                     "alergias" to alergias.trim().ifBlank { "Ninguna" },
-                    "fechaNacimiento" to fechaNacimiento.trim().ifBlank { null },
+                    "fecha_nacimiento" to fechaNacimiento.trim().ifBlank { null },
                     "direccion" to direccion.trim().ifBlank { null },
-                    "estatura" to (estatura ?: 0.0),
-                    "antecedentes" to antecedentes.trim().ifBlank { "Ninguna" }
+                    "estatura_inicial" to (estatura ?: 0.0),
+                    "antecedentes_cronicos" to antecedentes.trim().ifBlank { "Ninguna" }
                 )
 
                 withContext(Dispatchers.IO) {
