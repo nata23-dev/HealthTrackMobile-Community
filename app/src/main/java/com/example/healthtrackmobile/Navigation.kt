@@ -11,6 +11,9 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.example.healthtrackmobile.ui.dashboard.DashboardScreen
 import com.example.healthtrackmobile.ui.login.LoginScreen
 import com.example.healthtrackmobile.ui.login.RegisterScreen
@@ -34,11 +37,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainNavigation() {
   val context = LocalContext.current
-  val userId = remember { SessionManager.getUserId(context) }
-  val userName = remember { SessionManager.getUserName(context) }
-  val initialKey = remember(userId, userName) {
-    if (!userId.isNullOrEmpty() && !userName.isNullOrEmpty()) {
-      Main(userId = userId, userName = userName)
+  var currentUserId by remember { mutableStateOf(SessionManager.getUserId(context)) }
+  var currentUserName by remember { mutableStateOf(SessionManager.getUserName(context)) }
+  val initialKey = remember(currentUserId, currentUserName) {
+    if (!currentUserId.isNullOrEmpty() && !currentUserName.isNullOrEmpty()) {
+      Main(userId = currentUserId!!, userName = currentUserName!!)
     } else {
       Login
     }
@@ -56,6 +59,8 @@ fun MainNavigation() {
           LoginScreen(
             onLoginSuccess = { usuario ->
               SessionManager.saveSession(context, usuario.id ?: "", usuario.nombre ?: "")
+              currentUserId = usuario.id
+              currentUserName = usuario.nombre
               coroutineScope.launch {
                 com.example.healthtrackmobile.receiver.ReminderSyncManager.syncReminders(context, usuario.id ?: "")
                 com.example.healthtrackmobile.service.NotificationListenerService.startListening(context, usuario.id ?: "")
@@ -92,6 +97,8 @@ fun MainNavigation() {
           RegisterScreen(
             onRegisterSuccess = { usuario ->
               SessionManager.saveSession(context, usuario.id ?: "", usuario.nombre ?: "")
+              currentUserId = usuario.id
+              currentUserName = usuario.nombre
               coroutineScope.launch {
                 com.example.healthtrackmobile.receiver.ReminderSyncManager.syncReminders(context, usuario.id ?: "")
                 com.example.healthtrackmobile.service.NotificationListenerService.startListening(context, usuario.id ?: "")
@@ -113,6 +120,8 @@ fun MainNavigation() {
             userName = mainKey.userName,
             onLogout = {
               SessionManager.clearSession(context)
+              currentUserId = null
+              currentUserName = null
               backStack.clear()
               backStack.add(Login)
             },
@@ -219,6 +228,8 @@ fun MainNavigation() {
             userId = key.userId,
             onFinished = {
                 val userName = SessionManager.getUserName(context) ?: ""
+                currentUserId = key.userId
+                currentUserName = userName
                 backStack.clear()
                 backStack.add(Main(userId = key.userId, userName = userName))
             }
