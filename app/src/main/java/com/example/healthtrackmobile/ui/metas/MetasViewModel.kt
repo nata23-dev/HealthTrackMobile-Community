@@ -34,7 +34,7 @@ class MetasViewModel : ViewModel() {
             try {
                 val list = withContext(Dispatchers.IO) {
                     val snapshot = db.collection("metas")
-                        .whereEqualTo("pacienteId", userId)
+                        .whereEqualTo("paciente_id", userId)
                         .get()
                         .await()
                     
@@ -63,6 +63,36 @@ class MetasViewModel : ViewModel() {
                 onResult(true)
             } catch (e: Exception) {
                 onResult(false)
+            }
+        }
+    }
+
+    fun actualizarEstadoMeta(metaId: String, nuevoEstado: String, pacienteId: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    db.collection("metas").document(metaId)
+                        .update("estado", nuevoEstado)
+                        .await()
+                }
+                cargarMetas(pacienteId)
+            } catch (e: Exception) {
+                // Silenciosamente ignorar o notificar error
+            }
+        }
+    }
+
+    fun eliminarMeta(metaId: String, pacienteId: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    db.collection("metas").document(metaId)
+                        .delete()
+                        .await()
+                }
+                cargarMetas(pacienteId)
+            } catch (e: Exception) {
+                // Silenciosamente ignorar o notificar error
             }
         }
     }

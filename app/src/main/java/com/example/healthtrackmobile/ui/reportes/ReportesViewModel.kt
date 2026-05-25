@@ -67,7 +67,7 @@ class ReportesViewModel : ViewModel() {
                     
                     // Cargar recomendaciones médicas de Firestore
                     val recSnapshot = db.collection("recomendaciones")
-                        .whereEqualTo("pacienteId", userId)
+                        .whereEqualTo("paciente_id", userId)
                         .get()
                         .await()
                     val doctorRecs = recSnapshot.toObjects(Recomendacion::class.java)

@@ -14,6 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,8 +47,19 @@ fun MetasScreen(
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    // Estados para control de diálogos
+    var metaParaCompletar by remember { mutableStateOf<Meta?>(null) }
+    var metaParaEliminar by remember { mutableStateOf<Meta?>(null) }
+
     LaunchedEffect(userId) {
         viewModel.cargarMetas(userId)
+    }
+
+    val activeMetas = remember(state.metas) {
+        state.metas.filter { it.estado.uppercase().trim() == "ACTIVA" }
+    }
+    val completedMetas = remember(state.metas) {
+        state.metas.filter { it.estado.uppercase().trim() == "CUMPLIDA" }
     }
 
     Scaffold(
@@ -99,40 +113,191 @@ fun MetasScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (state.metas.isEmpty()) {
+                // Cabecera institucional
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "GOBIERNO DE MÉXICO",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Guinda4T,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "Expediente Digital de Metas de Salud",
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .background(Dorado4T)
+                        )
+                    }
+                }
+
+                // Sección 1: Metas Activas
+                item {
+                    Text(
+                        text = "Metas Activas",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Guinda4T,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                if (activeMetas.isEmpty()) {
                     item {
-                        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Aún no tienes metas registradas", color = Color.Gray)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No tienes metas activas actualmente.", color = Color.Gray, fontSize = 14.sp)
+                            }
                         }
                     }
                 } else {
-                    items(state.metas) { meta ->
-                        MetaCard(meta)
+                    items(activeMetas) { meta ->
+                        MetaCard(
+                            meta = meta,
+                            onCompleteClick = { metaParaCompletar = meta },
+                            onDeleteClick = { metaParaEliminar = meta }
+                        )
+                    }
+                }
+
+                // Sección 2: Metas Cumplidas
+                item {
+                    Text(
+                        text = "Metas Cumplidas",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Guinda4T,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+
+                if (completedMetas.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Aún no has completado metas. ¡Sigue adelante!", color = Color.Gray, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                } else {
+                    items(completedMetas) { meta ->
+                        MetaCard(
+                            meta = meta,
+                            onCompleteClick = {},
+                            onDeleteClick = { metaParaEliminar = meta }
+                        )
                     }
                 }
             }
         }
     }
+
+    // Diálogo de confirmación para Completar Meta
+    metaParaCompletar?.let { meta ->
+        AlertDialog(
+            onDismissRequest = { metaParaCompletar = null },
+            title = { Text("Completar Meta de Salud", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Deseas marcar la meta \"${meta.titulo}\" como completada?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.actualizarEstadoMeta(meta.id ?: "", "CUMPLIDA", userId)
+                        metaParaCompletar = null
+                        Toast.makeText(context, "Meta marcada como cumplida", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF2E7D32))
+                ) {
+                    Text("Marcar Cumplida", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { metaParaCompletar = null }) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White
+        )
+    }
+
+    // Diálogo de confirmación para Eliminar Meta
+    metaParaEliminar?.let { meta ->
+        AlertDialog(
+            onDismissRequest = { metaParaEliminar = null },
+            title = { Text("Eliminar Meta", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar permanentemente la meta \"${meta.titulo}\"? esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.eliminarMeta(meta.id ?: "", userId)
+                        metaParaEliminar = null
+                        Toast.makeText(context, "Meta eliminada", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { metaParaEliminar = null }) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            containerColor = Color.White
+        )
+    }
 }
 
 @Composable
-fun MetaCard(meta: Meta) {
-    val progress = remember(meta.valorInicial, meta.valorActual, meta.objetivoNumerico) {
-        val vIni = meta.valorInicial
-        val vAct = meta.valorActual
-        val vObj = meta.objetivoNumerico
-        
-        val totalRange = vObj - vIni
-        if (totalRange == 0.0) 0f
+fun MetaCard(
+    meta: Meta,
+    onCompleteClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val isCumplida = meta.estado.uppercase().trim() == "CUMPLIDA"
+    val progress = remember(meta.valorInicial, meta.valorActual, meta.objetivoNumerico, isCumplida) {
+        if (isCumplida) 1f
         else {
-            val progressDone = vAct - vIni
-            (progressDone / totalRange).coerceIn(0.0, 1.0).toFloat()
+            val vIni = meta.valorInicial
+            val vAct = meta.valorActual
+            val vObj = meta.objetivoNumerico
+            
+            val totalRange = vObj - vIni
+            if (totalRange == 0.0) 0f
+            else {
+                val progressDone = vAct - vIni
+                (progressDone / totalRange).coerceIn(0.0, 1.0).toFloat()
+            }
         }
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -165,14 +330,49 @@ fun MetaCard(meta: Meta) {
                 trackColor = Dorado4T.copy(alpha = 0.3f)
             )
             
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             
-            Text(
-                text = if (progress >= 1f) "¡Meta Alcanzada!" else "Sigue así, falta poco para tu objetivo.",
-                fontSize = 12.sp,
-                color = if (progress >= 1f) Color(0xFF1B5E20) else Color.Gray,
-                fontWeight = if (progress >= 1f) FontWeight.Bold else FontWeight.Normal
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isCumplida || progress >= 1f) "¡Meta Alcanzada!" else "Sigue así, falta poco para tu objetivo.",
+                    fontSize = 12.sp,
+                    color = if (isCumplida || progress >= 1f) Color(0xFF1B5E20) else Color.Gray,
+                    fontWeight = if (isCumplida || progress >= 1f) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!isCumplida) {
+                        IconButton(
+                            onClick = onCompleteClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Completar Meta",
+                                tint = Color(0xFF2E7D32)
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar Meta",
+                            tint = Color(0xFFC62828)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -218,7 +418,7 @@ fun NuevaMetaDialog(
         "PESO" to "Peso",
         "GLUCOSA" to "Glucosa",
         "PRESION" to "Presión Arterial",
-        "FRECUENCIA_CARDIACA" to "Frecuencia Cardíaca"
+        "FRECUENCIA" to "Frecuencia Cardíaca"
     )
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -248,7 +448,11 @@ fun NuevaMetaDialog(
                     onValueChange = { titulo = it },
                     label = { Text("Título de la meta") },
                     placeholder = { Text("Ej: Bajar a mi peso ideal") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Guinda4T,
+                        focusedLabelColor = Guinda4T
+                    )
                 )
 
                 // Selector Tipo de Métrica
@@ -260,12 +464,19 @@ fun NuevaMetaDialog(
                         label = { Text("Tipo de métrica") },
                         trailingIcon = {
                             IconButton(onClick = { menuExpanded = !menuExpanded }) {
-                                Icon(Icons.Default.ArrowDropDown, null)
+                                Icon(
+                                    imageVector = if (menuExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                    contentDescription = "Expandir"
+                                )
                             }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { menuExpanded = !menuExpanded }
+                            .clickable { menuExpanded = !menuExpanded },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
                     )
                     DropdownMenu(
                         expanded = menuExpanded,
@@ -295,14 +506,22 @@ fun NuevaMetaDialog(
                             onValueChange = { valorInicial = it },
                             label = { Text("Sistólica Inicial") },
                             placeholder = { Text("135") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
                         )
                         OutlinedTextField(
                             value = valorInicialSecundario,
                             onValueChange = { valorInicialSecundario = it },
                             label = { Text("Diastólica Inicial") },
                             placeholder = { Text("85") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
                         )
                     }
                     Row(
@@ -314,14 +533,22 @@ fun NuevaMetaDialog(
                             onValueChange = { objetivoNumerico = it },
                             label = { Text("Sistólica Objetivo") },
                             placeholder = { Text("120") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
                         )
                         OutlinedTextField(
                             value = objetivoSecundario,
                             onValueChange = { objetivoSecundario = it },
                             label = { Text("Diastólica Objetivo") },
                             placeholder = { Text("80") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
                         )
                     }
                 } else {
@@ -339,13 +566,21 @@ fun NuevaMetaDialog(
                         value = valorInicial,
                         onValueChange = { valorInicial = it },
                         label = { Text(labelIni) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
                     )
                     OutlinedTextField(
                         value = objetivoNumerico,
                         onValueChange = { objetivoNumerico = it },
                         label = { Text(labelObj) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
                     )
                 }
 

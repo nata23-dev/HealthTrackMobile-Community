@@ -44,6 +44,14 @@ class AgregarMetricaViewModel : ViewModel() {
                         } catch (e: Exception) {
                             // Si falla (ej. offline), Firestore maneja la re-sincronización automáticamente
                         }
+
+                        // Sincronizar dinámicamente con metas activas del paciente
+                        actualizarMetaActiva(
+                            userId = userId,
+                            tipoMetrica = metrica.tipo ?: "",
+                            nuevoValor = metrica.valor,
+                            nuevoValorSecundario = metrica.valorSecundario
+                        )
                     }
                 }
                 _isSaving.value = false
@@ -52,6 +60,36 @@ class AgregarMetricaViewModel : ViewModel() {
                 _isSaving.value = false
                 _error.value = e.message ?: "Error al guardar los registros"
             }
+        }
+    }
+
+    private suspend fun actualizarMetaActiva(
+        userId: String,
+        tipoMetrica: String,
+        nuevoValor: Double,
+        nuevoValorSecundario: Double
+    ) {
+        try {
+            // Se asume ejecución en Dispatchers.IO
+            val querySnapshot = db.collection("metas")
+                .whereEqualTo("paciente_id", userId)
+                .whereEqualTo("tipo_metrica", tipoMetrica)
+                .get()
+                .await()
+
+            for (doc in querySnapshot.documents) {
+                val estado = doc.getString("estado") ?: ""
+                if (estado.uppercase().trim() == "ACTIVA") {
+                    val updates = mutableMapOf<String, Any>()
+                    updates["valor_actual"] = nuevoValor
+                    if (tipoMetrica == "PRESION") {
+                        updates["valor_actual_secundario"] = nuevoValorSecundario
+                    }
+                    db.collection("metas").document(doc.id).update(updates).await()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AgregarMetricaViewModel", "Error al sincronizar con meta activa: ${e.message}", e)
         }
     }
 }
