@@ -116,7 +116,18 @@ fun MainNavigation() {
               userId = mainKey.userId,
               userName = mainKey.userName,
               onLogout = {
+                try {
+                  com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                } catch (e: Exception) {}
                 SessionManager.clearSession(context)
+                try {
+                  com.example.healthtrackmobile.service.NotificationListenerService.stopListening()
+                } catch (e: Exception) {}
+                try {
+                  androidx.work.WorkManager.getInstance(context).cancelAllWork()
+                } catch (e: Exception) {}
+                backStack.clear()
+                backStack.add(Login)
                 currentKey = Login
               },
               onAddMetricClick = {

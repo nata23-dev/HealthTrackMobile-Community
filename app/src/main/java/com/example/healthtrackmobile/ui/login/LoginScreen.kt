@@ -49,7 +49,9 @@ fun LoginScreen(
     // Manejar el éxito del login
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
-            onLoginSuccess((uiState as LoginUiState.Success).usuario)
+            val usuario = (uiState as LoginUiState.Success).usuario
+            viewModel.resetState()
+            onLoginSuccess(usuario)
         }
     }
 

@@ -52,4 +52,8 @@ class LoginViewModel(
             _uiState.value = LoginUiState.Idle
         }
     }
+
+    fun resetState() {
+        _uiState.value = LoginUiState.Idle
+    }
 }
