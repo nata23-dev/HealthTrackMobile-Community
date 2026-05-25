@@ -319,47 +319,322 @@ fun DashboardScreen(
                     }
                 }
 
-                // Carrusel de Métricas Críticas
+                // Estado de Salud General (Equivalente a Desktop KPIs)
                 item {
                     Text(
-                        text = "Estado de Salud Crítico",
+                        text = "Estado de Salud General",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Guinda4T,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(bottom = 8.dp)
+
+                    // Métricas locales para posibilitar smart-cast
+                    val ultimoPeso = state.ultimoPeso?.valor ?: 0.0
+                    val estaturaCm = state.perfil?.estatura ?: 0.0
+                    val estaturaM = estaturaCm / 100.0
+                    val imcVal = if (ultimoPeso > 0.0 && estaturaM > 0.0) {
+                        ultimoPeso / (estaturaM * estaturaM)
+                    } else 0.0
+
+                    val imcText = if (imcVal > 0.0) {
+                        String.format(java.util.Locale.US, "%.1f", imcVal)
+                    } else if (ultimoPeso > 0.0) {
+                        String.format(java.util.Locale.US, "%.1f kg", ultimoPeso)
+                    } else {
+                        "--"
+                    }
+
+                    val imcCategory = when {
+                        imcVal <= 0.0 -> if (ultimoPeso > 0.0) "Registre estatura" else "Sin datos"
+                        imcVal < 18.5 -> "Bajo peso"
+                        imcVal < 25.0 -> "Normal"
+                        imcVal < 30.0 -> "Sobrepeso"
+                        else -> "Obesidad"
+                    }
+
+                    val imcStyle = when {
+                        imcVal <= 0.0 -> "muted"
+                        imcVal < 18.5 -> "warning"
+                        imcVal < 25.0 -> "normal"
+                        imcVal < 30.0 -> "warning"
+                        else -> "alert"
+                    }
+
+                    // Cardiovascular
+                    val ultimaPresion = state.ultimaPresion
+                    val ultimaFrecuencia = state.ultimaFrecuencia
+                    var showPresion = true
+                    if (ultimaPresion != null && ultimaFrecuencia != null) {
+                        showPresion = ultimaPresion.timestamp >= ultimaFrecuencia.timestamp
+                    } else if (ultimaPresion == null && ultimaFrecuencia != null) {
+                        showPresion = false
+                    }
+
+                    val cardioText: String
+                    val cardioCategory: String
+                    val cardioStyle: String
+
+                    if (ultimaPresion == null && ultimaFrecuencia == null) {
+                        cardioText = "--"
+                        cardioCategory = "Sin registro"
+                        cardioStyle = "muted"
+                    } else if (showPresion && ultimaPresion != null) {
+                        val sys = ultimaPresion.valor
+                        val dia = ultimaPresion.valorSecundario
+                        cardioText = "${sys.toInt()}/${dia.toInt()} mmHg"
+                        cardioCategory = when {
+                            sys < 90 || dia < 60 -> "Hipotensión"
+                            sys > 180 || dia > 120 -> "Crisis"
+                            sys >= 140 || dia >= 90 -> "Hipertensión E2"
+                            sys >= 130 || dia >= 80 -> "Hipertensión E1"
+                            sys >= 120 -> "Elevada"
+                            else -> "Normal"
+                        }
+                        cardioStyle = when {
+                            sys < 90 || dia < 60 || sys > 180 || dia > 120 || sys >= 140 || dia >= 90 -> "alert"
+                            sys >= 130 || dia >= 80 || sys >= 120 -> "warning"
+                            else -> "normal"
+                        }
+                    } else {
+                        val fc = ultimaFrecuencia?.valor ?: 0.0
+                        cardioText = "${fc.toInt()} lpm"
+                        cardioCategory = when {
+                            fc >= 130.0 -> "Taquicardia A"
+                            fc > 100.0 -> "Taquicardia"
+                            fc >= 60.0 -> "Normal"
+                            fc >= 50.0 -> "Bradicardia"
+                            else -> "Bradicardia B"
+                        }
+                        cardioStyle = when {
+                            fc >= 130.0 || fc < 50.0 -> "alert"
+                            fc > 100.0 || fc < 60.0 -> "warning"
+                            else -> "normal"
+                        }
+                    }
+
+                    // Glucosa
+                    val ultimaGlucosa = state.ultimaGlucosa
+                    val glucoseText: String
+                    val glucoseCategory: String
+                    val glucoseStyle: String
+                    if (ultimaGlucosa != null) {
+                        val g = ultimaGlucosa.valor
+                        glucoseText = "${g.toInt()} mg/dL"
+                        glucoseCategory = when {
+                            g > 200.0 -> "Crítico"
+                            g > 125.0 -> "Elevada"
+                            g >= 100.0 -> "Límite alto"
+                            else -> "En objetivo"
+                        }
+                        glucoseStyle = when {
+                            g > 200.0 -> "alert"
+                            g > 125.0 || g >= 100.0 -> "warning"
+                            else -> "normal"
+                        }
+                    } else {
+                        glucoseText = "--"
+                        glucoseCategory = "Sin registro"
+                        glucoseStyle = "muted"
+                    }
+
+                    // Meta
+                    val metaActiva = state.metaActiva
+                    val metaText: String
+                    val metaSub: String
+                    val metaProgressoVal: Float?
+                    val metaStyle: String
+                    if (metaActiva != null) {
+                        val p = metaActiva.progresoActual.coerceIn(0.0, 1.0)
+                        metaText = "${(p * 100).toInt()}%"
+                        metaSub = metaActiva.titulo ?: "Meta activa"
+                        metaProgressoVal = p.toFloat()
+                        metaStyle = when {
+                            p >= 1.0 -> "normal"
+                            p > 0.5 -> "normal"
+                            else -> "warning"
+                        }
+                    } else {
+                        metaText = "0%"
+                        metaSub = "Sin metas activas"
+                        metaProgressoVal = null
+                        metaStyle = "muted"
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        item {
-                            MetricMiniCard(
-                                title = "Glucosa",
-                                value = state.ultimaGlucosa?.valor?.let { "${it.toInt()}" } ?: "--",
-                                unit = "mg/dL",
-                                icon = Icons.Default.Bloodtype,
-                                isWarning = (state.ultimaGlucosa?.valor ?: 0.0) > 125.0
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            KPICard(
+                                title = "Masa Corporal (IMC)",
+                                value = imcText,
+                                category = imcCategory,
+                                style = imcStyle,
+                                icon = Icons.Default.Scale,
+                                modifier = Modifier.weight(1f)
                             )
-                        }
-                        item {
-                            val sis = state.ultimaPresion?.valor?.toInt() ?: 0
-                            val dia = state.ultimaPresion?.valorSecundario?.toInt() ?: 0
-                            MetricMiniCard(
-                                title = "Presión",
-                                value = if (sis > 0) "$sis/$dia" else "--",
-                                unit = "mmHg",
-                                icon = Icons.Default.Speed,
-                                isWarning = sis > 135 || dia > 85
-                            )
-                        }
-                        item {
-                            MetricMiniCard(
-                                title = "Ritmo",
-                                value = state.ultimaFrecuencia?.valor?.let { "${it.toInt()}" } ?: "--",
-                                unit = "lpm",
+                            KPICard(
+                                title = "Cardiovascular",
+                                value = cardioText,
+                                category = cardioCategory,
+                                style = cardioStyle,
                                 icon = Icons.Default.Favorite,
-                                isWarning = (state.ultimaFrecuencia?.valor ?: 0.0) > 100.0
+                                modifier = Modifier.weight(1f)
                             )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            KPICard(
+                                title = "Estado Glucémico",
+                                value = glucoseText,
+                                category = glucoseCategory,
+                                style = glucoseStyle,
+                                icon = Icons.Default.Bloodtype,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KPICard(
+                                title = "Progreso de Meta",
+                                value = metaText,
+                                category = metaSub,
+                                style = metaStyle,
+                                icon = Icons.Default.EmojiEvents,
+                                progressVal = metaProgressoVal,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Estado Ambiental y de Salud Pública
+                item {
+                    Text(
+                        text = "Estado Ambiental y Alertas",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Guinda4T,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Fila Clima
+                            val clima = state.climaActual
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Dorado4T.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Cloud,
+                                        contentDescription = null,
+                                        tint = DoradoOficial,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Condiciones Climáticas",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = GuindaOficial
+                                    )
+                                    val climaStr = if (clima != null && clima.disponible) {
+                                        "${clima.ciudad}: ${clima.temperatura}°C, ${clima.condicion}"
+                                    } else {
+                                        "Buscando información climática o fuera de línea..."
+                                    }
+                                    Text(
+                                        text = climaStr,
+                                        fontSize = 11.sp,
+                                        color = Color.DarkGray
+                                    )
+                                    if (clima != null && !clima.calidadAire.isNullOrBlank()) {
+                                        Text(
+                                            text = clima.calidadAire,
+                                            fontSize = 10.sp,
+                                            color = if (clima.calidadAireRiesgosa) Color.Red else Color.Gray,
+                                            fontWeight = if (clima.calidadAireRiesgosa) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Fila Alertas Sanitarias
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            if (state.alertasActivas.any { it.nivelRiesgo == "ALTA" }) Color(0xFFFDE8E8)
+                                            else Dorado4T.copy(alpha = 0.2f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Campaign,
+                                        contentDescription = null,
+                                        tint = if (state.alertasActivas.any { it.nivelRiesgo == "ALTA" }) Color.Red else DoradoOficial,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Alertas Epidemiológicas y Sanitarias",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = GuindaOficial
+                                    )
+                                    if (state.alertasActivas.isEmpty()) {
+                                        Text(
+                                            text = "Situación regional y sanitaria controlada. Sin alertas vigentes.",
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
+                                    } else {
+                                        state.alertasActivas.forEach { alerta ->
+                                            Row(
+                                                modifier = Modifier.padding(vertical = 2.dp),
+                                                verticalAlignment = Alignment.Top
+                                            ) {
+                                                Text(
+                                                    text = "• ",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (alerta.nivelRiesgo == "ALTA") Color.Red else DoradoOficial
+                                                )
+                                                Text(
+                                                    text = alerta.descripcion,
+                                                    fontSize = 11.sp,
+                                                    color = Color.DarkGray
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -663,6 +938,103 @@ fun RecommendationItem(rec: Recomendacion) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun KPICard(
+    title: String,
+    value: String,
+    category: String,
+    style: String,
+    icon: ImageVector,
+    progressVal: Float? = null,
+    modifier: Modifier = Modifier
+) {
+    val chipBgColor = when (style) {
+        "normal" -> Color(0xFFE2F0D9)
+        "warning" -> Color(0xFFFFF3E0)
+        "alert" -> Color(0xFFFDE8E8)
+        else -> Color(0xFFF1F1F1)
+    }
+    val chipTextColor = when (style) {
+        "normal" -> Color(0xFF1B5E20)
+        "warning" -> Color(0xFFE65100)
+        "alert" -> Color(0xFFC62828)
+        else -> Color(0xFF616161)
+    }
+
+    Card(
+        modifier = modifier.height(115.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, null, tint = GuindaOficial, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+            }
+
+            Column {
+                Text(
+                    text = value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = GuindaOficial
+                )
+                
+                if (progressVal != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { progressVal },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = GuindaOficial,
+                        trackColor = Dorado4T.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = category,
+                        fontSize = 10.sp,
+                        color = Color.DarkGray,
+                        maxLines = 1
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(chipBgColor)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = category,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = chipTextColor
+                        )
+                    }
+                }
             }
         }
     }

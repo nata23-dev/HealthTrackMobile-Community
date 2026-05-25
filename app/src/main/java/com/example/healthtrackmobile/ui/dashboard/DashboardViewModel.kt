@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.example.healthtrackmobile.service.ClimaResponse
+import com.example.healthtrackmobile.service.AlertaSanitariaResponse
 
 @Immutable
 data class DashboardState(
@@ -28,7 +30,11 @@ data class DashboardState(
     val ultimaGlucosa: Metrica? = null,
     val ultimaPresion: Metrica? = null,
     val ultimaFrecuencia: Metrica? = null,
-    val ultimoPeso: Metrica? = null
+    val ultimoPeso: Metrica? = null,
+    val perfil: PerfilPaciente? = null,
+    val climaActual: ClimaResponse? = null,
+    val alertasActivas: ImmutableList<AlertaSanitariaResponse> = persistentListOf(),
+    val metaActiva: Meta? = null
 )
 
 private data class DashboardCargaResult(
@@ -36,7 +42,11 @@ private data class DashboardCargaResult(
     val recomendaciones: List<Recomendacion>,
     val logros: List<HistorialLogro>,
     val notificaciones: List<Notificacion>,
-    val sugerenciaIA: Recomendacion?
+    val sugerenciaIA: Recomendacion?,
+    val perfil: PerfilPaciente?,
+    val climaActual: ClimaResponse?,
+    val alertasActivas: List<AlertaSanitariaResponse>,
+    val metaActiva: Meta?
 )
 
 class DashboardViewModel : ViewModel() {
@@ -89,15 +99,33 @@ class DashboardViewModel : ViewModel() {
                     val listNotif = notifSnapshot.toObjects(Notificacion::class.java)
                         .sortedByDescending { it.fechaCreacion }
 
-                    // 5. Módulo de Prevención IA
+                    // 5. Cargar perfil clínico
                     val perfilDoc = db.collection("perfiles_pacientes").document(userId).get().await()
                     val perfil = perfilDoc.toObject(PerfilPaciente::class.java)
                     
+                    // 6. Cargar clima y alertas ambientales
                     val engine = com.example.healthtrackmobile.service.RecommendationEngine()
                     val clima = engine.getClimaActual(perfil?.direccion, null)
+                    val alertas = engine.obtenerAlertasActivas(perfil?.direccion)
+                    
+                    // 7. Cargar metas y seleccionar la meta activa principal
+                    val metasSnapshot = db.collection("metas")
+                        .whereEqualTo("pacienteId", userId)
+                        .get()
+                        .await()
+                    val listMetas = metasSnapshot.toObjects(Meta::class.java)
+                    metasSnapshot.documents.forEachIndexed { index, doc ->
+                        if (index < listMetas.size) {
+                            listMetas[index].id = doc.id
+                        }
+                    }
+                    val metaActiva = listMetas.filter { m ->
+                        m.estado.uppercase().trim() == "ACTIVA"
+                    }.minByOrNull { it.prioridad }
+
+                    // 8. Sugerencia Preventiva IA
                     val usuarioDoc = db.collection("usuarios").document(userId).get().await()
                     val usuario = usuarioDoc.toObject(Usuario::class.java)
-                    
                     val sugerenciasIA = engine.generarSugerenciasIAPaciente(usuario, sortedMetricas, clima)
                     
                     DashboardCargaResult(
@@ -105,7 +133,11 @@ class DashboardViewModel : ViewModel() {
                         recomendaciones = listRec,
                         logros = listLogros,
                         notificaciones = listNotif,
-                        sugerenciaIA = sugerenciasIA.firstOrNull()
+                        sugerenciaIA = sugerenciasIA.firstOrNull(),
+                        perfil = perfil,
+                        climaActual = clima,
+                        alertasActivas = alertas,
+                        metaActiva = metaActiva
                     )
                 }
 
@@ -134,7 +166,11 @@ class DashboardViewModel : ViewModel() {
                         ultimoPeso = data.metricas.firstOrNull { m -> 
                             val t = m.tipo?.uppercase()?.trim()
                             t == "PESO" || t == "WEIGHT"
-                        }
+                        },
+                        perfil = data.perfil,
+                        climaActual = data.climaActual,
+                        alertasActivas = data.alertasActivas.toImmutableList(),
+                        metaActiva = data.metaActiva
                     )
                 }
             } catch (e: Exception) {

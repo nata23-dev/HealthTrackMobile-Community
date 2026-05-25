@@ -50,4 +50,20 @@ class MetasViewModel : ViewModel() {
             }
         }
     }
+
+    fun crearMeta(meta: Meta, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val ref = db.collection("metas").document()
+                    meta.id = ref.id
+                    ref.set(meta).await()
+                }
+                cargarMetas(meta.pacienteId ?: "")
+                onResult(true)
+            } catch (e: Exception) {
+                onResult(false)
+            }
+        }
+    }
 }
