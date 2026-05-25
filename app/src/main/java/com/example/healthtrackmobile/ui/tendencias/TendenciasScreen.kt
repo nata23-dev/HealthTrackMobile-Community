@@ -496,6 +496,32 @@ fun GlucoseChart(metrics: List<Metrica>, modifier: Modifier = Modifier) {
                 androidx.compose.ui.geometry.Offset(x, y.toFloat())
             }
 
+            // Dibujar gradiente debajo de la curva
+            val fillPath = Path().apply {
+                if (points.isNotEmpty()) {
+                    moveTo(points[0].x, points[0].y)
+                    for (i in 1 until points.size) {
+                        lineTo(points[i].x, points[i].y)
+                    }
+                    lineTo(points.last().x, size.height - bottomPadding)
+                    lineTo(points.first().x, size.height - bottomPadding)
+                    close()
+                }
+            }
+            if (points.isNotEmpty()) {
+                drawPath(
+                    path = fillPath,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            GuindaOficial.copy(alpha = 0.25f),
+                            Color.Transparent
+                        ),
+                        startY = points.minOf { it.y },
+                        endY = size.height - bottomPadding
+                    )
+                )
+            }
+
             // Dibujar línea conectora
             val path = Path().apply {
                 if (points.isNotEmpty()) {
@@ -656,6 +682,58 @@ fun PressureChart(metrics: List<Metrica>, modifier: Modifier = Modifier) {
                 val x = leftPadding + index * xStep
                 val y = size.height - bottomPadding - (m.valorSecundario - minY) * yScale
                 androidx.compose.ui.geometry.Offset(x, y.toFloat())
+            }
+
+            // Dibujar gradiente Sistólica
+            val fillPathSis = Path().apply {
+                if (pointsSis.isNotEmpty()) {
+                    moveTo(pointsSis[0].x, pointsSis[0].y)
+                    for (i in 1 until pointsSis.size) {
+                        lineTo(pointsSis[i].x, pointsSis[i].y)
+                    }
+                    lineTo(pointsSis.last().x, size.height - bottomPadding)
+                    lineTo(pointsSis.first().x, size.height - bottomPadding)
+                    close()
+                }
+            }
+            if (pointsSis.isNotEmpty()) {
+                drawPath(
+                    path = fillPathSis,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            GuindaOficial.copy(alpha = 0.15f),
+                            Color.Transparent
+                        ),
+                        startY = pointsSis.minOf { it.y },
+                        endY = size.height - bottomPadding
+                    )
+                )
+            }
+
+            // Dibujar gradiente Diastólica
+            val fillPathDia = Path().apply {
+                if (pointsDia.isNotEmpty()) {
+                    moveTo(pointsDia[0].x, pointsDia[0].y)
+                    for (i in 1 until pointsDia.size) {
+                        lineTo(pointsDia[i].x, pointsDia[i].y)
+                    }
+                    lineTo(pointsDia.last().x, size.height - bottomPadding)
+                    lineTo(pointsDia.first().x, size.height - bottomPadding)
+                    close()
+                }
+            }
+            if (pointsDia.isNotEmpty()) {
+                drawPath(
+                    path = fillPathDia,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            DoradoOficial.copy(alpha = 0.20f),
+                            Color.Transparent
+                        ),
+                        startY = pointsDia.minOf { it.y },
+                        endY = size.height - bottomPadding
+                    )
+                )
             }
 
             // Dibujar línea conectora Sistólica (Guinda)
