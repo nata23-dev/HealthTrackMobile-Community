@@ -94,13 +94,13 @@ class PerfilClinicoViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val datos = hashMapOf(
-                    "grupo_sanguineo" to grupoSanguineo.trim().ifBlank { null },
+                    "grupoSanguineo" to grupoSanguineo.trim().ifBlank { null },
                     "alergias" to alergias.trim().ifBlank { "Ninguna" },
-                    "fecha_nacimiento" to fechaNacimiento.trim().ifBlank { null },
+                    "fechaNacimiento" to fechaNacimiento.trim().ifBlank { null },
                     "direccion" to direccion.trim().ifBlank { null },
-                    "estatura_inicial" to (estatura ?: 0.0),
-                    "peso_inicial" to (pesoInicial ?: 0.0),
-                    "antecedentes_cronicos" to antecedentes.trim().ifBlank { "Ninguna" }
+                    "estatura" to (estatura ?: 0.0),
+                    "pesoInicial" to (pesoInicial ?: 0.0),
+                    "antecedentes" to antecedentes.trim().ifBlank { "Ninguna" }
                 )
 
                 withContext(Dispatchers.IO) {
@@ -111,7 +111,7 @@ class PerfilClinicoViewModel : ViewModel() {
 
                     if (pesoInicial != null && pesoInicial > 0.0) {
                         val metricaPeso = hashMapOf(
-                            "paciente_id" to userId,
+                            "pacienteId" to userId,
                             "tipo" to "PESO",
                             "valor" to pesoInicial,
                             "timestamp" to System.currentTimeMillis(),
@@ -136,8 +136,8 @@ class PerfilClinicoViewModel : ViewModel() {
     private suspend fun actualizarMetaActiva(userId: String, tipoMetrica: String, nuevoValor: Double) {
         try {
             val querySnapshot = db.collection("metas")
-                .whereEqualTo("paciente_id", userId)
-                .whereEqualTo("tipo_metrica", tipoMetrica)
+                .whereEqualTo("pacienteId", userId)
+                .whereEqualTo("tipoMetrica", tipoMetrica)
                 .get()
                 .await()
 
@@ -145,7 +145,7 @@ class PerfilClinicoViewModel : ViewModel() {
                 val estado = doc.getString("estado") ?: ""
                 if (estado.uppercase().trim() == "ACTIVA") {
                     db.collection("metas").document(doc.id)
-                        .update("valor_actual", nuevoValor)
+                        .update("valorActual", nuevoValor)
                         .await()
                 }
             }

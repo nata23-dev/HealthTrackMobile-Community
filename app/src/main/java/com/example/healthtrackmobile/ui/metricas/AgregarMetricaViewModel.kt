@@ -20,6 +20,35 @@ class AgregarMetricaViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _metricas = MutableStateFlow<List<Metrica>>(emptyList())
+    val metricas: StateFlow<List<Metrica>> = _metricas.asStateFlow()
+
+    private val _isLoadingHistorial = MutableStateFlow(false)
+    val isLoadingHistorial: StateFlow<Boolean> = _isLoadingHistorial.asStateFlow()
+
+    fun cargarMetricas(userId: String) {
+        _isLoadingHistorial.value = true
+        viewModelScope.launch {
+            try {
+                val snapshot = db.collection("metricas")
+                    .whereEqualTo("pacienteId", userId)
+                    .get()
+                    .await()
+                val list = snapshot.toObjects(Metrica::class.java)
+                snapshot.documents.forEachIndexed { index, doc ->
+                    if (index < list.size) {
+                        list[index].id = doc.id
+                    }
+                }
+                _metricas.value = list.sortedByDescending { it.timestamp }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Error al cargar historial de métricas"
+            } finally {
+                _isLoadingHistorial.value = false
+            }
+        }
+    }
+
     fun guardarMetricas(
         userId: String,
         metricas: List<Metrica>,
@@ -55,6 +84,7 @@ class AgregarMetricaViewModel : ViewModel() {
                     }
                 }
                 _isSaving.value = false
+                cargarMetricas(userId)
                 onSuccess()
             } catch (e: Exception) {
                 _isSaving.value = false
@@ -72,8 +102,8 @@ class AgregarMetricaViewModel : ViewModel() {
         try {
             // Se asume ejecución en Dispatchers.IO
             val querySnapshot = db.collection("metas")
-                .whereEqualTo("paciente_id", userId)
-                .whereEqualTo("tipo_metrica", tipoMetrica)
+                .whereEqualTo("pacienteId", userId)
+                .whereEqualTo("tipoMetrica", tipoMetrica)
                 .get()
                 .await()
 
@@ -81,9 +111,9 @@ class AgregarMetricaViewModel : ViewModel() {
                 val estado = doc.getString("estado") ?: ""
                 if (estado.uppercase().trim() == "ACTIVA") {
                     val updates = mutableMapOf<String, Any>()
-                    updates["valor_actual"] = nuevoValor
+                    updates["valorActual"] = nuevoValor
                     if (tipoMetrica == "PRESION") {
-                        updates["valor_actual_secundario"] = nuevoValorSecundario
+                        updates["valorActualSecundario"] = nuevoValorSecundario
                     }
                     db.collection("metas").document(doc.id).update(updates).await()
                 }

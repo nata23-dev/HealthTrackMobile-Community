@@ -31,7 +31,7 @@ class TendenciasViewModel : ViewModel() {
             try {
                 val data = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val snapshot = db.collection("metricas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     

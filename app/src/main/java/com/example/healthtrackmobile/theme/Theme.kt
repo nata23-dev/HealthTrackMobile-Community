@@ -27,20 +27,11 @@ private val LightColorScheme =
 
 @Composable
 fun HealthTrackMobileTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color disabled by default to maintain institutional colors
+  darkTheme: Boolean = false, // Forzar tema claro institucional 4T en todo momento
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
-    }
-
+  val colorScheme = LightColorScheme
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
+

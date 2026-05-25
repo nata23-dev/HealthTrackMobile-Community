@@ -6,9 +6,9 @@ import com.google.firebase.firestore.PropertyName
 @IgnoreExtraProperties
 data class Usuario(
     var id: String? = null,
-    @get:PropertyName("nombre_completo")
-    @set:PropertyName("nombre_completo")
-    @PropertyName("nombre_completo")
+    @get:PropertyName("nombre")
+    @set:PropertyName("nombre")
+    @PropertyName("nombre")
     var nombre: String? = null,
     var correo: String? = null,
     var telefono: String? = null,

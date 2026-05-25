@@ -34,7 +34,7 @@ class MetasViewModel : ViewModel() {
             try {
                 val list = withContext(Dispatchers.IO) {
                     val snapshot = db.collection("metas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     

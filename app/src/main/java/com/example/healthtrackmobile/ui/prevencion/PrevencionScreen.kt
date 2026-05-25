@@ -37,6 +37,7 @@ fun PrevencionScreen(
     userId: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: PrevencionViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -48,46 +49,48 @@ fun PrevencionScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "GOBIERNO DE MÉXICO",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Dorado4T,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "Prevención IA",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.cargarDatosPrevencion(userId) }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Actualizar",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Guinda4T
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "GOBIERNO DE MÉXICO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Dorado4T,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Prevención IA",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Volver",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.cargarDatosPrevencion(userId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Actualizar",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Guinda4T
+                    )
                 )
-            )
+            }
         },
         containerColor = Fondo4T,
         modifier = modifier.fillMaxSize()

@@ -33,6 +33,8 @@ import com.example.healthtrackmobile.util.PdfGeneratorUtil
 fun ReportesScreen(
     userId: String,
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: ReportesViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -44,15 +46,17 @@ fun ReportesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Reportes Generales", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
-            )
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = { Text("Reportes Generales", color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
+            }
         },
         containerColor = Fondo4T
     ) { padding ->

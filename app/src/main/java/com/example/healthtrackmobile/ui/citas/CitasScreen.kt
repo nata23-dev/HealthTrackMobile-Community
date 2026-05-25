@@ -40,6 +40,7 @@ fun CitasScreen(
     userName: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: CitasViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,28 +69,30 @@ fun CitasScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Mis Citas Médicas",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = Color.White
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Mis Citas Médicas",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Guinda4T
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Guinda4T
+                    )
                 )
-            )
+            }
         },
         containerColor = Fondo4T,
         modifier = modifier.fillMaxSize()

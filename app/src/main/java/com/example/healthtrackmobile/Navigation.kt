@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.example.healthtrackmobile.ui.dashboard.DashboardScreen
 import com.example.healthtrackmobile.ui.login.LoginScreen
+import com.example.healthtrackmobile.ui.login.RegisterScreen
 import com.example.healthtrackmobile.ui.metricas.AgregarMetricasScreen
 import com.example.healthtrackmobile.ui.perfil.PerfilClinicoScreen
 import com.example.healthtrackmobile.ui.directorio.DirectorioMedicoScreen
@@ -79,6 +80,28 @@ fun MainNavigation() {
                     backStack.add(Onboarding)
                 }
               }
+            },
+            onRegisterClick = {
+              backStack.add(Register)
+            },
+            modifier = Modifier.safeDrawingPadding()
+          )
+        }
+        entry<Register> {
+          val context = LocalContext.current
+          RegisterScreen(
+            onRegisterSuccess = { usuario ->
+              SessionManager.saveSession(context, usuario.id ?: "", usuario.nombre ?: "")
+              coroutineScope.launch {
+                com.example.healthtrackmobile.receiver.ReminderSyncManager.syncReminders(context, usuario.id ?: "")
+                com.example.healthtrackmobile.service.NotificationListenerService.startListening(context, usuario.id ?: "")
+                // New user: Go directly to Onboarding
+                backStack.clear()
+                backStack.add(Onboarding)
+              }
+            },
+            onNavigateToLogin = {
+              backStack.removeLastOrNull()
             },
             modifier = Modifier.safeDrawingPadding()
           )

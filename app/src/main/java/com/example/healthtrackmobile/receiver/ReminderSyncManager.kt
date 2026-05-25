@@ -11,7 +11,7 @@ object ReminderSyncManager {
         try {
             val db = FirebaseFirestore.getInstance()
             val snapshot = db.collection("recordatorios_medicamentos")
-                .whereEqualTo("paciente_id", userId)
+                .whereEqualTo("pacienteId", userId)
                 .whereEqualTo("estado", "activo")
                 .get()
                 .await()

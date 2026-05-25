@@ -45,8 +45,9 @@ fun TendenciasScreen(
     onInicioClick: () -> Unit,
     onCitasClick: () -> Unit,
     onProfileClick: () -> Unit,
-    viewModel: TendenciasViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
+    viewModel: TendenciasViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -57,65 +58,69 @@ fun TendenciasScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "GOBIERNO DE MÉXICO",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Dorado4T,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "Tendencias de Salud",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
-            )
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "GOBIERNO DE MÉXICO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Dorado4T,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Tendencias de Salud",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
+            }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onInicioClick,
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Inicio") }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) },
-                    label = { Text("Tendencias") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Guinda4T,
-                        indicatorColor = Dorado4T.copy(alpha = 0.2f)
+            if (!isEmbedded) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
+                ) {
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onInicioClick,
+                        icon = { Icon(Icons.Default.Home, null) },
+                        label = { Text("Inicio") }
                     )
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onCitasClick,
-                    icon = { Icon(Icons.Default.DateRange, null) },
-                    label = { Text("Citas") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProfileClick,
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text("Perfil") }
-                )
+                    NavigationBarItem(
+                        selected = true,
+                        onClick = { },
+                        icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) },
+                        label = { Text("Tendencias") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Guinda4T,
+                            indicatorColor = Dorado4T.copy(alpha = 0.2f)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onCitasClick,
+                        icon = { Icon(Icons.Default.DateRange, null) },
+                        label = { Text("Citas") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onProfileClick,
+                        icon = { Icon(Icons.Default.Person, null) },
+                        label = { Text("Perfil") }
+                    )
+                }
             }
         },
         containerColor = Fondo4T

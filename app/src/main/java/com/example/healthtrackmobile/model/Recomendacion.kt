@@ -8,25 +8,24 @@ import com.google.firebase.firestore.PropertyName
 data class Recomendacion(
     var id: String? = null,
     
-    @get:PropertyName("medico_id")
-    @set:PropertyName("medico_id")
-    @PropertyName("medico_id")
+    @get:PropertyName("medicoId")
+    @set:PropertyName("medicoId")
+    @PropertyName("medicoId")
     var medicoId: String? = null,
     
-    @get:PropertyName("paciente_id")
-    @set:PropertyName("paciente_id")
-    @PropertyName("paciente_id")
+    @get:PropertyName("pacienteId")
+    @set:PropertyName("pacienteId")
+    @PropertyName("pacienteId")
     var pacienteId: String? = null,
     
     var mensaje: String? = null,
     var prioridad: String? = null, // "ALTA" | "MEDIA" | "BAJA"
     
-    @get:PropertyName("fecha_envio")
-    @set:PropertyName("fecha_envio")
-    @PropertyName("fecha_envio")
+    @get:PropertyName("fechaEnvio")
+    @set:PropertyName("fechaEnvio")
+    @PropertyName("fechaEnvio")
     var fechaEnvio: Long = 0L,
     
-    @get:Exclude
     var leida: Boolean = false,
     
     @get:Exclude

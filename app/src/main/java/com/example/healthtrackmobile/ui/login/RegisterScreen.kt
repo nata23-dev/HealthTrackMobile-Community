@@ -2,19 +2,21 @@ package com.example.healthtrackmobile.ui.login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -30,26 +32,28 @@ import com.example.healthtrackmobile.model.Usuario
 import com.example.healthtrackmobile.theme.Dorado4T
 import com.example.healthtrackmobile.theme.Fondo4T
 import com.example.healthtrackmobile.theme.Guinda4T
-import com.example.healthtrackmobile.theme.VerdeSalud4T
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
-    onLoginSuccess: (Usuario) -> Unit,
-    onRegisterClick: () -> Unit,
+fun RegisterScreen(
+    onRegisterSuccess: (Usuario) -> Unit,
+    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: RegisterViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordConfirm by remember { mutableStateOf("") }
+    
     var passwordVisible by remember { mutableStateOf(false) }
+    var passwordConfirmVisible by remember { mutableStateOf(false) }
 
-    // Manejar el éxito del login
     LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess((uiState as LoginUiState.Success).usuario)
+        if (uiState is RegisterUiState.Success) {
+            onRegisterSuccess((uiState as RegisterUiState.Success).usuario)
         }
     }
 
@@ -71,6 +75,7 @@ fun LoginScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -100,23 +105,48 @@ fun LoginScreen(
                         .background(Dorado4T)
                 )
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 Text(
-                    text = "HealthTrack Community",
-                    fontSize = 24.sp,
+                    text = "Registro de Paciente",
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Guinda4T
                 )
                 Text(
-                    text = "Acceso al Sistema",
-                    fontSize = 14.sp,
-                    color = Color.Gray
+                    text = "Cree su cuenta para comenzar su monitoreo",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Campo Email
+                // Campo Nombre Completo
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { 
+                        nombre = it
+                        viewModel.clearError()
+                    },
+                    label = { Text("Nombre Completo") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Nombre") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Guinda4T,
+                        focusedLabelColor = Guinda4T,
+                        cursorColor = Guinda4T
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Campo Correo
                 OutlinedTextField(
                     value = email,
                     onValueChange = { 
@@ -138,32 +168,28 @@ fun LoginScreen(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Campo Password
+                // Campo Contraseña
                 OutlinedTextField(
                     value = password,
                     onValueChange = { 
                         password = it
                         viewModel.clearError()
                     },
-                    label = { Text("Contraseña") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+                    label = { Text("Contraseña (mín. 8 caracteres)") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Contraseña") },
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        val description = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(imageVector = image, contentDescription = null)
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { viewModel.login(email, password) }
+                        imeAction = ImeAction.Next
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -173,24 +199,58 @@ fun LoginScreen(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Campo Confirmar Contraseña
+                OutlinedTextField(
+                    value = passwordConfirm,
+                    onValueChange = { 
+                        passwordConfirm = it
+                        viewModel.clearError()
+                    },
+                    label = { Text("Confirmar Contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirmar contraseña") },
+                    trailingIcon = {
+                        val image = if (passwordConfirmVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordConfirmVisible = !passwordConfirmVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    },
+                    visualTransformation = if (passwordConfirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { viewModel.registrar(nombre, email, password, passwordConfirm) }
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Guinda4T,
+                        focusedLabelColor = Guinda4T,
+                        cursorColor = Guinda4T
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Mensaje de Error
-                if (uiState is LoginUiState.Error) {
+                if (uiState is RegisterUiState.Error) {
                     Text(
-                        text = (uiState as LoginUiState.Error).message,
+                        text = (uiState as RegisterUiState.Error).message,
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Botón Iniciar Sesión
+                // Botón Registrarse
                 Button(
-                    onClick = { viewModel.login(email, password) },
-                    enabled = uiState !is LoginUiState.Loading,
+                    onClick = { viewModel.registrar(nombre, email, password, passwordConfirm) },
+                    enabled = uiState !is RegisterUiState.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -201,7 +261,7 @@ fun LoginScreen(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    if (uiState is LoginUiState.Loading) {
+                    if (uiState is RegisterUiState.Loading) {
                         CircularProgressIndicator(
                             color = Color.White,
                             modifier = Modifier.size(24.dp),
@@ -209,7 +269,7 @@ fun LoginScreen(
                         )
                     } else {
                         Text(
-                            text = "Iniciar Sesión",
+                            text = "REGISTRARSE",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -218,12 +278,13 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Botón para volver al Login
                 TextButton(
-                    onClick = onRegisterClick,
-                    enabled = uiState !is LoginUiState.Loading
+                    onClick = onNavigateToLogin,
+                    enabled = uiState !is RegisterUiState.Loading
                 ) {
                     Text(
-                        text = "¿No tienes cuenta? Regístrate aquí",
+                        text = "¿Ya tienes cuenta? Inicia sesión",
                         color = Guinda4T,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp

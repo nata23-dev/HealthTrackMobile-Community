@@ -41,7 +41,7 @@ class CitasViewModel : ViewModel() {
             try {
                 // 1. Cargar citas del paciente
                 val citasSnap = db.collection("citas_medicas")
-                    .whereEqualTo("paciente_id", userId)
+                    .whereEqualTo("pacienteId", userId)
                     .get()
                     .await()
                 val citas = citasSnap.documents.mapNotNull { doc ->
@@ -50,10 +50,10 @@ class CitasViewModel : ViewModel() {
 
                 // 2. Cargar IDs de médicos vinculados
                 val vinculosSnap = db.collection("medico_pacientes")
-                    .whereEqualTo("paciente_id", userId)
+                    .whereEqualTo("pacienteId", userId)
                     .get()
                     .await()
-                val medicoIds = vinculosSnap.documents.mapNotNull { it.getString("medico_id") }
+                val medicoIds = vinculosSnap.documents.mapNotNull { it.getString("medicoId") }
 
                 // 3. Obtener detalles de cada médico asignado
                 val medicos = mutableListOf<Usuario>()

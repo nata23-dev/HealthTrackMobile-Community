@@ -45,6 +45,39 @@ class AuthService {
         }
     }
 
+    suspend fun register(nombre: String, email: String, passwordRaw: String): Result<Usuario> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (nombre.isBlank() || email.isBlank() || passwordRaw.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Todos los campos son obligatorios"))
+        }
+
+        return@withContext try {
+            if (existeCorreo(email)) {
+                return@withContext Result.failure(Exception("Este correo ya está registrado en HealthTrack."))
+            }
+
+            val hashedPassword = PasswordUtils.hashPassword(passwordRaw)
+                ?: return@withContext Result.failure(Exception("Error al cifrar la contraseña"))
+
+            val nuevoUsuario = Usuario(
+                nombre = nombre.trim(),
+                correo = email.trim(),
+                password = hashedPassword,
+                rol = "paciente",
+                activo = true,
+                fechaRegistro = System.currentTimeMillis()
+            )
+
+            val docRef = db.collection("usuarios").document()
+            val userId = docRef.id
+            nuevoUsuario.id = userId
+            docRef.set(nuevoUsuario).await()
+
+            Result.success(nuevoUsuario)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun existeCorreo(email: String): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (email.isBlank()) return@withContext false
         return@withContext try {

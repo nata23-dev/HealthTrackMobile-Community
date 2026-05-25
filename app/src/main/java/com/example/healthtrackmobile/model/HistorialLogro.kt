@@ -7,9 +7,9 @@ import com.google.firebase.firestore.PropertyName
 data class HistorialLogro(
     var id: String? = null,
     
-    @get:PropertyName("paciente_id")
-    @set:PropertyName("paciente_id")
-    @PropertyName("paciente_id")
+    @get:PropertyName("pacienteId")
+    @set:PropertyName("pacienteId")
+    @PropertyName("pacienteId")
     var pacienteId: String? = null,
     
     var titulo: String? = null,

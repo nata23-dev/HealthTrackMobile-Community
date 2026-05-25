@@ -1,7 +1,6 @@
 package com.example.healthtrackmobile.model
 
 import com.google.firebase.firestore.IgnoreExtraProperties
-import com.google.firebase.firestore.PropertyName
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -9,34 +8,12 @@ import java.util.Locale
 @IgnoreExtraProperties
 data class PerfilPaciente(
     var id: String? = null,
-    
-    @get:PropertyName("grupo_sanguineo")
-    @set:PropertyName("grupo_sanguineo")
-    @PropertyName("grupo_sanguineo")
     var grupoSanguineo: String? = null,
-    
     var alergias: String? = null,
-    
-    @get:PropertyName("fecha_nacimiento")
-    @set:PropertyName("fecha_nacimiento")
-    @PropertyName("fecha_nacimiento")
     var fechaNacimiento: String? = null, // ISO-8601: "YYYY-MM-DD"
-    
     var direccion: String? = null,
-    
-    @get:PropertyName("estatura_inicial")
-    @set:PropertyName("estatura_inicial")
-    @PropertyName("estatura_inicial")
     var estatura: Double = 0.0, // en cm, ej: 170.5
-    
-    @get:PropertyName("antecedentes_cronicos")
-    @set:PropertyName("antecedentes_cronicos")
-    @PropertyName("antecedentes_cronicos")
     var antecedentes: String? = null,
-    
-    @get:PropertyName("peso_inicial")
-    @set:PropertyName("peso_inicial")
-    @PropertyName("peso_inicial")
     var pesoInicial: Double = 0.0
 ) {
     fun calcularEdad(): Int {

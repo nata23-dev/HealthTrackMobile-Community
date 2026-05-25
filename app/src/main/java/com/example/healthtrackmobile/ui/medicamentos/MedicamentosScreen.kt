@@ -41,6 +41,8 @@ import com.example.healthtrackmobile.util.WhatsAppShareUtils
 fun MedicamentosScreen(
     userId: String,
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: MedicamentosViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -62,15 +64,17 @@ fun MedicamentosScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Mis Medicamentos", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
-            )
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = { Text("Mis Medicamentos", color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(

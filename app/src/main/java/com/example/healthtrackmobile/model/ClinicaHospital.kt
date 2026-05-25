@@ -1,7 +1,6 @@
 package com.example.healthtrackmobile.model
 
 import com.google.firebase.firestore.IgnoreExtraProperties
-import com.google.firebase.firestore.PropertyName
 import java.util.UUID
 
 @IgnoreExtraProperties
@@ -11,12 +10,7 @@ data class ClinicaHospital(
     var direccion: String? = null,
     var ciudad: String? = null,
     var telefono: String? = null,
-    
-    @get:PropertyName("email_contacto")
-    @set:PropertyName("email_contacto")
-    @PropertyName("email_contacto")
     var emailContacto: String? = null,
-    
     var estado: String? = "activo"
 ) {
     // Constructor secundario para inicializar con valores por defecto

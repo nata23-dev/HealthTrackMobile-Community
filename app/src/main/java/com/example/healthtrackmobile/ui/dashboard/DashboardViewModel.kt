@@ -61,7 +61,7 @@ class DashboardViewModel : ViewModel() {
                 val data = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     // 1. Cargar todas las métricas del paciente para filtrar en memoria
                     val metricasSnapshot = db.collection("metricas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
 
@@ -77,15 +77,32 @@ class DashboardViewModel : ViewModel() {
 
                     // 2. Cargar recomendaciones
                     val recSnapshot = db.collection("recomendaciones")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     val listRec = recSnapshot.toObjects(Recomendacion::class.java)
-                        .sortedByDescending { it.fechaEnvio }
+
+                    // Enriquecer con nombres de médicos
+                    val medicosCache = mutableMapOf<String, String>()
+                    for (rec in listRec) {
+                        val medId = rec.medicoId
+                        if (!medId.isNullOrBlank()) {
+                            val nombre = medicosCache.getOrPut(medId) {
+                                try {
+                                    val userDoc = db.collection("usuarios").document(medId).get().await()
+                                    userDoc.getString("nombre") ?: "Médico Especialista"
+                                } catch (e: Exception) {
+                                    "Médico Especialista"
+                                }
+                            }
+                            rec.medicoNombre = nombre
+                        }
+                    }
+                    val sortedRec = listRec.sortedByDescending { it.fechaEnvio }
 
                     // 3. Cargar logros
                     val logrosSnapshot = db.collection("historial_logros")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     val listLogros = logrosSnapshot.toObjects(HistorialLogro::class.java)
@@ -93,7 +110,7 @@ class DashboardViewModel : ViewModel() {
 
                     // 4. Cargar notificaciones
                     val notifSnapshot = db.collection("notificaciones")
-                        .whereEqualTo("usuario_id", userId)
+                        .whereEqualTo("usuarioId", userId)
                         .get()
                         .await()
                     val listNotif = notifSnapshot.toObjects(Notificacion::class.java)
@@ -110,7 +127,7 @@ class DashboardViewModel : ViewModel() {
                     
                     // 7. Cargar metas y seleccionar la meta activa principal
                     val metasSnapshot = db.collection("metas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     val listMetas = metasSnapshot.toObjects(Meta::class.java)
@@ -130,7 +147,7 @@ class DashboardViewModel : ViewModel() {
                     
                     DashboardCargaResult(
                         metricas = sortedMetricas,
-                        recomendaciones = listRec,
+                        recomendaciones = sortedRec,
                         logros = listLogros,
                         notificaciones = listNotif,
                         sugerenciaIA = sugerenciasIA.firstOrNull(),

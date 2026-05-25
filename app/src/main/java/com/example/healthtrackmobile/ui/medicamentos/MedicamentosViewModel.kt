@@ -27,7 +27,7 @@ class MedicamentosViewModel : ViewModel() {
             try {
                 val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val snapshot = db.collection("recordatorios_medicamentos")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .whereEqualTo("estado", "activo")
                         .get()
                         .await()

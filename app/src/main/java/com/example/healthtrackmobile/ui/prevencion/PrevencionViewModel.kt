@@ -64,7 +64,7 @@ class PrevencionViewModel : ViewModel() {
 
                     // 3. Cargar las métricas de salud del paciente
                     val metricasSnapshot = db.collection("metricas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     val listMetricas = metricasSnapshot.toObjects(Metrica::class.java)

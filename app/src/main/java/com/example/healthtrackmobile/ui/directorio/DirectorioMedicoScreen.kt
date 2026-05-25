@@ -29,6 +29,7 @@ import com.example.healthtrackmobile.theme.*
 fun DirectorioMedicoScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: DirectorioMedicoViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -40,15 +41,17 @@ fun DirectorioMedicoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Directorio Médico", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
-            )
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = { Text("Directorio Médico", color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
+            }
         },
         containerColor = Fondo4T
     ) { padding ->

@@ -58,7 +58,7 @@ class ReportesViewModel : ViewModel() {
                     val perfil = perfilDoc.toObject(PerfilPaciente::class.java)
 
                     val metricasSnapshot = db.collection("metricas")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     
@@ -67,11 +67,28 @@ class ReportesViewModel : ViewModel() {
                     
                     // Cargar recomendaciones médicas de Firestore
                     val recSnapshot = db.collection("recomendaciones")
-                        .whereEqualTo("paciente_id", userId)
+                        .whereEqualTo("pacienteId", userId)
                         .get()
                         .await()
                     val doctorRecs = recSnapshot.toObjects(Recomendacion::class.java)
-                        .sortedByDescending { it.fechaEnvio }
+                    
+                    // Enriquecer con nombres de médicos
+                    val medicosCache = mutableMapOf<String, String>()
+                    for (rec in doctorRecs) {
+                        val medId = rec.medicoId
+                        if (!medId.isNullOrBlank()) {
+                            val nombre = medicosCache.getOrPut(medId) {
+                                try {
+                                    val userDoc = db.collection("usuarios").document(medId).get().await()
+                                    userDoc.getString("nombre") ?: "Médico Especialista"
+                                } catch (e: Exception) {
+                                    "Médico Especialista"
+                                }
+                            }
+                            rec.medicoNombre = nombre
+                        }
+                    }
+                    val sortedDoctorRecs = doctorRecs.sortedByDescending { it.fechaEnvio }
 
                     // Calcular sugerencias y alertas usando el RecommendationEngine
                     val engine = RecommendationEngine()

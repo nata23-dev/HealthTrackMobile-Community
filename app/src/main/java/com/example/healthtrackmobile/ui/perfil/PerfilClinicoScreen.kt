@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -32,9 +33,12 @@ fun PerfilClinicoScreen(
     userId: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
+    onProfileSaved: () -> Unit = {},
     viewModel: PerfilClinicoViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     var fechaNacimiento by remember { mutableStateOf("") }
     var estaturaStr by remember { mutableStateOf("") }
@@ -72,34 +76,40 @@ fun PerfilClinicoScreen(
             ningunaChecked = ant.contains("Ninguna") || ant.isBlank() || ant == "Ninguno"
         } else if (uiState is PerfilClinicoUiState.SavedSuccess) {
             viewModel.clearState()
-            onNavigateBack()
+            android.widget.Toast.makeText(context, "Ficha clínica guardada con éxito", android.widget.Toast.LENGTH_SHORT).show()
+            onProfileSaved()
+            if (!isEmbedded) {
+                onNavigateBack()
+            }
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Ficha Clínica",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = Color.White
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Ficha Clínica",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Guinda4T
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Regresar",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Guinda4T
+                    )
                 )
-            )
+            }
         },
         containerColor = Fondo4T,
         modifier = modifier.fillMaxSize()

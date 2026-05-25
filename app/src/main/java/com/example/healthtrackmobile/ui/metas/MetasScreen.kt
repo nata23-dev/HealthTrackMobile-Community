@@ -17,7 +17,9 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +34,7 @@ import com.example.healthtrackmobile.model.Meta
 import com.example.healthtrackmobile.theme.Guinda4T
 import com.example.healthtrackmobile.theme.Fondo4T
 import com.example.healthtrackmobile.theme.Dorado4T
+import com.example.healthtrackmobile.theme.DoradoOficial
 import com.example.healthtrackmobile.util.shimmerEffect
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -41,10 +44,12 @@ import androidx.compose.ui.platform.LocalContext
 fun MetasScreen(
     userId: String,
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEmbedded: Boolean = false,
     viewModel: MetasViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showDialog by remember { mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     // Estados para control de diálogos
@@ -64,154 +69,85 @@ fun MetasScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Mis Metas de Salud", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showDialog = true },
-                containerColor = Guinda4T,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, "Nueva Meta")
+            if (!isEmbedded) {
+                TopAppBar(
+                    title = { Text("Mis Metas de Salud", color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
             }
         },
-        containerColor = Fondo4T
+        containerColor = Fondo4T,
+        modifier = modifier.fillMaxSize()
     ) { padding ->
-        if (showDialog) {
-            NuevaMetaDialog(
-                userId = userId,
-                onDismiss = { showDialog = false },
-                onSubmit = { meta ->
-                    viewModel.crearMeta(meta) { success ->
-                        showDialog = false
-                        if (success) {
-                            Toast.makeText(context, "Meta guardada con éxito", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "Error al guardar meta", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.White,
+                contentColor = Guinda4T,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = Guinda4T
+                    )
                 }
-            )
-        }
-
-        if (state.isLoading) {
-            MetasShimmer(padding)
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Cabecera institucional
-                item {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "GOBIERNO DE MÉXICO",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Guinda4T,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "Expediente Digital de Metas de Salud",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(2.dp)
-                                .background(Dorado4T)
-                        )
-                    }
-                }
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = { Text("En Curso", fontWeight = FontWeight.Bold) },
+                    selectedContentColor = Guinda4T,
+                    unselectedContentColor = Color.Gray
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = { Text("Historial Logros", fontWeight = FontWeight.Bold) },
+                    selectedContentColor = Guinda4T,
+                    unselectedContentColor = Color.Gray
+                )
+                Tab(
+                    selected = selectedTabIndex == 2,
+                    onClick = { selectedTabIndex = 2 },
+                    text = { Text("Nueva Meta", fontWeight = FontWeight.Bold) },
+                    selectedContentColor = Guinda4T,
+                    unselectedContentColor = Color.Gray
+                )
+            }
 
-                // Sección 1: Metas Activas
-                item {
-                    Text(
-                        text = "Metas Activas",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Guinda4T,
-                        modifier = Modifier.padding(top = 8.dp)
+            if (state.isLoading) {
+                MetasShimmer(PaddingValues(16.dp))
+            } else {
+                when (selectedTabIndex) {
+                    0 -> MetasEnCursoTab(
+                        activeMetas = activeMetas,
+                        onCompleteClick = { metaParaCompletar = it },
+                        onDeleteClick = { metaParaEliminar = it }
                     )
-                }
-
-                if (activeMetas.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No tienes metas activas actualmente.", color = Color.Gray, fontSize = 14.sp)
+                    1 -> HistorialLogrosTab(
+                        completedMetas = completedMetas
+                    )
+                    2 -> NuevaMetaTab(
+                        userId = userId,
+                        onSubmit = { meta ->
+                            viewModel.crearMeta(meta) { success ->
+                                if (success) {
+                                    Toast.makeText(context, "Meta guardada con éxito", Toast.LENGTH_SHORT).show()
+                                    selectedTabIndex = 0 // Regresar a la primera pestaña
+                                } else {
+                                    Toast.makeText(context, "Error al guardar meta", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
-                    }
-                } else {
-                    items(activeMetas) { meta ->
-                        MetaCard(
-                            meta = meta,
-                            onCompleteClick = { metaParaCompletar = meta },
-                            onDeleteClick = { metaParaEliminar = meta }
-                        )
-                    }
-                }
-
-                // Sección 2: Metas Cumplidas
-                item {
-                    Text(
-                        text = "Metas Cumplidas",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Guinda4T,
-                        modifier = Modifier.padding(top = 12.dp)
                     )
-                }
-
-                if (completedMetas.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Aún no has completado metas. ¡Sigue adelante!", color = Color.Gray, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                } else {
-                    items(completedMetas) { meta ->
-                        MetaCard(
-                            meta = meta,
-                            onCompleteClick = {},
-                            onDeleteClick = { metaParaEliminar = meta }
-                        )
-                    }
                 }
             }
         }
@@ -269,6 +205,443 @@ fun MetasScreen(
             },
             containerColor = Color.White
         )
+    }
+}
+
+@Composable
+fun MetasEnCursoTab(
+    activeMetas: List<Meta>,
+    onCompleteClick: (Meta) -> Unit,
+    onDeleteClick: (Meta) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Cabecera institucional
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "GOBIERNO DE MÉXICO",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Guinda4T,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Expediente Digital de Metas de Salud",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(Dorado4T)
+                )
+            }
+        }
+
+        item {
+            Text(
+                text = "Metas Activas",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Guinda4T,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        if (activeMetas.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No tienes metas activas actualmente.", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            }
+        } else {
+            items(activeMetas) { meta ->
+                MetaCard(
+                    meta = meta,
+                    onCompleteClick = { onCompleteClick(meta) },
+                    onDeleteClick = { onDeleteClick(meta) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HistorialLogrosTab(
+    completedMetas: List<Meta>
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Cabecera institucional
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "GOBIERNO DE MÉXICO",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Guinda4T,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Historial de Logros y Metas Cumplidas",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(Dorado4T)
+                )
+            }
+        }
+
+        item {
+            Text(
+                text = "Metas Cumplidas",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Guinda4T,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        if (completedMetas.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Aún no has completado metas. ¡Sigue adelante!", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            }
+        } else {
+            items(completedMetas) { meta ->
+                MetaCard(
+                    meta = meta,
+                    onCompleteClick = {},
+                    onDeleteClick = {}
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NuevaMetaTab(
+    userId: String,
+    onSubmit: (Meta) -> Unit
+) {
+    var titulo by remember { mutableStateOf("") }
+    var tipoMetrica by remember { mutableStateOf("PESO") }
+    var objetivoNumerico by remember { mutableStateOf("") }
+    var objetivoSecundario by remember { mutableStateOf("") }
+    var valorInicial by remember { mutableStateOf("") }
+    var valorInicialSecundario by remember { mutableStateOf("") }
+    var prioridad by remember { mutableStateOf(1) } // 1 = Alta, 2 = Media, 3 = Baja
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    
+    val tipos = listOf(
+        "PESO" to "Peso",
+        "GLUCOSA" to "Glucosa",
+        "PRESION" to "Presión Arterial",
+        "FRECUENCIA" to "Frecuencia Cardíaca"
+    )
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Cabecera institucional
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "GOBIERNO DE MÉXICO",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Guinda4T,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = "Registro de Nuevo Enfoque de Salud",
+                fontSize = 13.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(Dorado4T)
+            )
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (errorMsg != null) {
+                    Text(errorMsg ?: "", color = Color.Red, fontSize = 12.sp)
+                }
+
+                OutlinedTextField(
+                    value = titulo,
+                    onValueChange = { titulo = it },
+                    label = { Text("Título de la meta") },
+                    placeholder = { Text("Ej: Bajar a mi peso ideal") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Guinda4T,
+                        focusedLabelColor = Guinda4T
+                    )
+                )
+
+                // Selector Tipo de Métrica
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = tipos.find { it.first == tipoMetrica }?.second ?: "Peso",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Tipo de métrica") },
+                        trailingIcon = {
+                            IconButton(onClick = { menuExpanded = !menuExpanded }) {
+                                Icon(
+                                    imageVector = if (menuExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                    contentDescription = "Expandir"
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { menuExpanded = !menuExpanded },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
+                    )
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        tipos.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item.second) },
+                                onClick = {
+                                    tipoMetrica = item.first
+                                    menuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Campos dinámicos según tipo
+                if (tipoMetrica == "PRESION") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = valorInicial,
+                            onValueChange = { valorInicial = it },
+                            label = { Text("Sistólica Inicial") },
+                            placeholder = { Text("135") },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
+                        )
+                        OutlinedTextField(
+                            value = valorInicialSecundario,
+                            onValueChange = { valorInicialSecundario = it },
+                            label = { Text("Diastólica Inicial") },
+                            placeholder = { Text("85") },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = objetivoNumerico,
+                            onValueChange = { objetivoNumerico = it },
+                            label = { Text("Sistólica Objetivo") },
+                            placeholder = { Text("120") },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
+                        )
+                        OutlinedTextField(
+                            value = objetivoSecundario,
+                            onValueChange = { objetivoSecundario = it },
+                            label = { Text("Diastólica Objetivo") },
+                            placeholder = { Text("80") },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T
+                            )
+                        )
+                    }
+                } else {
+                    val labelIni = when(tipoMetrica) {
+                        "PESO" -> "Peso Inicial (kg)"
+                        "GLUCOSA" -> "Glucosa Inicial (mg/dL)"
+                        else -> "Ritmo Inicial (lpm)"
+                    }
+                    val labelObj = when(tipoMetrica) {
+                        "PESO" -> "Peso Objetivo (kg)"
+                        "GLUCOSA" -> "Glucosa Objetivo (mg/dL)"
+                        else -> "Ritmo Objetivo (lpm)"
+                    }
+                    OutlinedTextField(
+                        value = valorInicial,
+                        onValueChange = { valorInicial = it },
+                        label = { Text(labelIni) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
+                    )
+                    OutlinedTextField(
+                        value = objetivoNumerico,
+                        onValueChange = { objetivoNumerico = it },
+                        label = { Text(labelObj) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Guinda4T,
+                            focusedLabelColor = Guinda4T
+                        )
+                    )
+                }
+
+                // Selector Prioridad
+                Text("Prioridad / Enfoque", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    listOf(1 to "Alta", 2 to "Media", 3 to "Baja").forEach { p ->
+                        val selected = prioridad == p.first
+                        Button(
+                            onClick = { prioridad = p.first },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selected) Guinda4T else Color.LightGray.copy(alpha = 0.3f),
+                                contentColor = if (selected) Color.White else Color.DarkGray
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(p.second, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                if (titulo.isBlank()) {
+                    errorMsg = "Por favor ingresa un título descriptivo"
+                    return@Button
+                }
+                val valIni = valorInicial.toDoubleOrNull()
+                val valObj = objetivoNumerico.toDoubleOrNull()
+                if (valIni == null || valObj == null) {
+                    errorMsg = "Por favor ingresa valores iniciales y objetivos válidos"
+                    return@Button
+                }
+
+                val valIniSec = if (tipoMetrica == "PRESION") valorInicialSecundario.toDoubleOrNull() else 0.0
+                val valObjSec = if (tipoMetrica == "PRESION") objetivoSecundario.toDoubleOrNull() else 0.0
+                if (tipoMetrica == "PRESION" && (valIniSec == null || valObjSec == null)) {
+                    errorMsg = "Por favor ingresa valores de presión arterial secundarios válidos"
+                    return@Button
+                }
+
+                val unidad = when(tipoMetrica) {
+                    "PESO" -> "kg"
+                    "GLUCOSA" -> "mg/dL"
+                    "PRESION" -> "mmHg"
+                    else -> "lpm"
+                }
+
+                val meta = Meta(
+                    pacienteId = userId,
+                    titulo = titulo,
+                    tipoMetrica = tipoMetrica,
+                    valorInicial = valIni,
+                    valorActual = valIni,
+                    objetivoNumerico = valObj,
+                    valorInicialSecundario = valIniSec ?: 0.0,
+                    valorActualSecundario = valIniSec ?: 0.0,
+                    objetivoSecundario = valObjSec ?: 0.0,
+                    progresoActual = 0.0,
+                    estado = "ACTIVA",
+                    prioridad = prioridad,
+                    unidad = unidad,
+                    fechaCumplimiento = System.currentTimeMillis()
+                )
+                onSubmit(meta)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Guinda4T),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(Icons.Default.Save, null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("GUARDAR META", fontWeight = FontWeight.Bold, color = Color.White)
+        }
     }
 }
 
@@ -396,272 +769,4 @@ fun MetasShimmer(padding: PaddingValues) {
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NuevaMetaDialog(
-    userId: String,
-    onDismiss: () -> Unit,
-    onSubmit: (Meta) -> Unit
-) {
-    var titulo by remember { mutableStateOf("") }
-    var tipoMetrica by remember { mutableStateOf("PESO") }
-    var objetivoNumerico by remember { mutableStateOf("") }
-    var objetivoSecundario by remember { mutableStateOf("") }
-    var valorInicial by remember { mutableStateOf("") }
-    var valorInicialSecundario by remember { mutableStateOf("") }
-    var prioridad by remember { mutableStateOf(1) } // 1 = Alta, 2 = Media, 3 = Baja
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-    
-    val tipos = listOf(
-        "PESO" to "Peso",
-        "GLUCOSA" to "Glucosa",
-        "PRESION" to "Presión Arterial",
-        "FRECUENCIA" to "Frecuencia Cardíaca"
-    )
-    var menuExpanded by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Nueva Meta de Salud",
-                fontWeight = FontWeight.Bold,
-                color = Guinda4T,
-                fontSize = 18.sp
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (errorMsg != null) {
-                    Text(errorMsg ?: "", color = Color.Red, fontSize = 12.sp)
-                }
-
-                OutlinedTextField(
-                    value = titulo,
-                    onValueChange = { titulo = it },
-                    label = { Text("Título de la meta") },
-                    placeholder = { Text("Ej: Bajar a mi peso ideal") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Guinda4T,
-                        focusedLabelColor = Guinda4T
-                    )
-                )
-
-                // Selector Tipo de Métrica
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = tipos.find { it.first == tipoMetrica }?.second ?: "Peso",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Tipo de métrica") },
-                        trailingIcon = {
-                            IconButton(onClick = { menuExpanded = !menuExpanded }) {
-                                Icon(
-                                    imageVector = if (menuExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                    contentDescription = "Expandir"
-                                )
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { menuExpanded = !menuExpanded },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Guinda4T,
-                            focusedLabelColor = Guinda4T
-                        )
-                    )
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false },
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    ) {
-                        tipos.forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item.second) },
-                                onClick = {
-                                    tipoMetrica = item.first
-                                    menuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Campos dinámicos según tipo
-                if (tipoMetrica == "PRESION") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = valorInicial,
-                            onValueChange = { valorInicial = it },
-                            label = { Text("Sistólica Inicial") },
-                            placeholder = { Text("135") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Guinda4T,
-                                focusedLabelColor = Guinda4T
-                            )
-                        )
-                        OutlinedTextField(
-                            value = valorInicialSecundario,
-                            onValueChange = { valorInicialSecundario = it },
-                            label = { Text("Diastólica Inicial") },
-                            placeholder = { Text("85") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Guinda4T,
-                                focusedLabelColor = Guinda4T
-                            )
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = objetivoNumerico,
-                            onValueChange = { objetivoNumerico = it },
-                            label = { Text("Sistólica Objetivo") },
-                            placeholder = { Text("120") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Guinda4T,
-                                focusedLabelColor = Guinda4T
-                            )
-                        )
-                        OutlinedTextField(
-                            value = objetivoSecundario,
-                            onValueChange = { objetivoSecundario = it },
-                            label = { Text("Diastólica Objetivo") },
-                            placeholder = { Text("80") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Guinda4T,
-                                focusedLabelColor = Guinda4T
-                            )
-                        )
-                    }
-                } else {
-                    val labelIni = when(tipoMetrica) {
-                        "PESO" -> "Peso Inicial (kg)"
-                        "GLUCOSA" -> "Glucosa Inicial (mg/dL)"
-                        else -> "Ritmo Inicial (lpm)"
-                    }
-                    val labelObj = when(tipoMetrica) {
-                        "PESO" -> "Peso Objetivo (kg)"
-                        "GLUCOSA" -> "Glucosa Objetivo (mg/dL)"
-                        else -> "Ritmo Objetivo (lpm)"
-                    }
-                    OutlinedTextField(
-                        value = valorInicial,
-                        onValueChange = { valorInicial = it },
-                        label = { Text(labelIni) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Guinda4T,
-                            focusedLabelColor = Guinda4T
-                        )
-                    )
-                    OutlinedTextField(
-                        value = objetivoNumerico,
-                        onValueChange = { objetivoNumerico = it },
-                        label = { Text(labelObj) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Guinda4T,
-                            focusedLabelColor = Guinda4T
-                        )
-                    )
-                }
-
-                // Selector Prioridad
-                Text("Prioridad / Enfoque", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    listOf(1 to "Alta", 2 to "Media", 3 to "Baja").forEach { p ->
-                        val selected = prioridad == p.first
-                        Button(
-                            onClick = { prioridad = p.first },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) Guinda4T else Color.LightGray.copy(alpha = 0.3f),
-                                contentColor = if (selected) Color.White else Color.DarkGray
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(p.second, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (titulo.isBlank()) {
-                        errorMsg = "Por favor ingresa un título descriptivo"
-                        return@TextButton
-                    }
-                    val valIni = valorInicial.toDoubleOrNull()
-                    val valObj = objetivoNumerico.toDoubleOrNull()
-                    if (valIni == null || valObj == null) {
-                        errorMsg = "Por favor ingresa valores iniciales y objetivos válidos"
-                        return@TextButton
-                    }
-
-                    val valIniSec = if (tipoMetrica == "PRESION") valorInicialSecundario.toDoubleOrNull() else 0.0
-                    val valObjSec = if (tipoMetrica == "PRESION") objetivoSecundario.toDoubleOrNull() else 0.0
-                    if (tipoMetrica == "PRESION" && (valIniSec == null || valObjSec == null)) {
-                        errorMsg = "Por favor ingresa valores de presión arterial secundarios válidos"
-                        return@TextButton
-                    }
-
-                    val unidad = when(tipoMetrica) {
-                        "PESO" -> "kg"
-                        "GLUCOSA" -> "mg/dL"
-                        "PRESION" -> "mmHg"
-                        else -> "lpm"
-                    }
-
-                    val meta = Meta(
-                        pacienteId = userId,
-                        titulo = titulo,
-                        tipoMetrica = tipoMetrica,
-                        valorInicial = valIni,
-                        valorActual = valIni,
-                        objetivoNumerico = valObj,
-                        valorInicialSecundario = valIniSec ?: 0.0,
-                        valorActualSecundario = valIniSec ?: 0.0,
-                        objetivoSecundario = valObjSec ?: 0.0,
-                        progresoActual = 0.0,
-                        estado = "ACTIVA",
-                        prioridad = prioridad,
-                        unidad = unidad,
-                        fechaCumplimiento = System.currentTimeMillis()
-                    )
-                    onSubmit(meta)
-                }
-            ) {
-                Text("Guardar", color = Guinda4T, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color.Gray)
-            }
-        },
-        containerColor = Color.White
-    )
 }

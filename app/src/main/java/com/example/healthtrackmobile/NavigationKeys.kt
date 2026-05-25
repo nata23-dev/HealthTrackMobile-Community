@@ -4,6 +4,7 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable data object Login : NavKey
+@Serializable data object Register : NavKey
 @Serializable data class Main(val userId: String, val userName: String) : NavKey
 @Serializable data class AgregarMetricas(val userId: String) : NavKey
 @Serializable data class PerfilClinico(val userId: String) : NavKey
