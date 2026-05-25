@@ -1,34 +1,47 @@
 package com.example.healthtrackmobile.ui.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.healthtrackmobile.model.HistorialLogro
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.activity.compose.BackHandler
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
+import kotlinx.coroutines.launch
+import android.widget.Toast
+import com.example.healthtrackmobile.util.PdfGeneratorUtil
 import com.example.healthtrackmobile.model.Metrica
 import com.example.healthtrackmobile.model.Recomendacion
 import com.example.healthtrackmobile.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.healthtrackmobile.util.shimmerEffect
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,314 +54,407 @@ fun DashboardScreen(
     onDirectoryClick: () -> Unit,
     onCitasClick: () -> Unit,
     onPrevencionClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: DashboardViewModel = viewModel()
+    onMedicamentosClick: () -> Unit = {},
+    onMetasClick: () -> Unit = {},
+    onReportesClick: () -> Unit = {},
+    viewModel: DashboardViewModel = viewModel(),
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var showDownloadDialog by remember { mutableStateOf(false) }
 
-    // Cargar datos al entrar a la pantalla
-    LaunchedEffect(userId) {
-        viewModel.cargarDatosDashboard(userId)
-        com.example.healthtrackmobile.receiver.ReminderSyncManager.syncReminders(context, userId)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "GOBIERNO DE MÉXICO",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Dorado4T,
-                            letterSpacing = 1.sp
+    // Cerrar la app al presionar atrás en el Dashboard
+    BackHandler {
+        if (drawerState.isOpen) {
+            scope.launch { drawerState.close() }
+        } else {
+            (context as? ComponentActivity)?.finish()
+        }
+    }
+
+    LaunchedEffect(userId) {
+        viewModel.cargarDatosDashboard(userId)
+    }
+
+    if (showDownloadDialog) {
+        AlertDialog(
+            onDismissRequest = { showDownloadDialog = false },
+            title = { Text("Descargar Reporte PDF") },
+            text = { Text("¿Desea generar y descargar su reporte clínico en formato PDF?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDownloadDialog = false
+                        val success = PdfGeneratorUtil.generarReporteClinico(
+                            context = context,
+                            nombrePaciente = userName,
+                            folioHT = userId.take(8),
+                            metricas = state.metricasCriticas,
+                            recomendaciones = state.recomendaciones,
+                            alertas = listOf(state.sugerenciaIA?.mensaje ?: "Sin alertas activas")
                         )
-                        Text(
-                            text = "Ficha Clínica de Monitoreo",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onPrevencionClick) {
-                        Icon(
-                            imageVector = Icons.Default.Psychology,
-                            contentDescription = "Prevención IA",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onCitasClick) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Citas Médicas",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onDirectoryClick) {
-                        Icon(
-                            imageVector = Icons.Default.LocalHospital,
-                            contentDescription = "Directorio Médico",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onProfileClick) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Ficha Clínica",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Cerrar Sesión",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Guinda4T
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddMetricClick,
-                containerColor = Guinda4T,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Registrar Métrica"
-                )
-            }
-        },
-        containerColor = Fondo4T,
-        modifier = modifier.fillMaxSize()
-    ) { paddingValues ->
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Guinda4T)
-            }
-        } else if (state.error != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Error,
-                            contentDescription = "Error",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = state.error ?: "Error al conectar con la base de datos",
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.cargarDatosDashboard(userId) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Guinda4T)
-                        ) {
-                            Text("Reintentar")
+                        if (success) {
+                            Toast.makeText(context, "Reporte guardado en Descargas", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "Error al generar el reporte", Toast.LENGTH_LONG).show()
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Guinda4T)
+                ) {
+                    Text("GENERAR")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDownloadDialog = false }) {
+                    Text("CANCELAR", color = Guinda4T)
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
+        )
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        modifier = modifier,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
             ) {
-                // Bienvenida
-                item {
+                // Header Institucional
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Guinda4T, Guinda4T.copy(alpha = 0.8f))
+                            )
+                        )
+                        .padding(24.dp),
+                    contentAlignment = Alignment.BottomStart
+                ) {
                     Column {
+                        Icon(
+                            Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            tint = Dorado4T,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = userName,
+                            color = Color.White,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Folio: ${userId.take(8).uppercase()}",
+                            color = Dorado4T,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                NavigationDrawerItem(
+                    label = { Text("Registrar Métricas", fontWeight = FontWeight.Bold) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onAddMetricClick()
+                    },
+                    icon = { Icon(Icons.Default.AddChart, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Guinda4T.copy(alpha = 0.05f),
+                        unselectedIconColor = Guinda4T,
+                        unselectedTextColor = Guinda4T
+                    )
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Mis Medicamentos") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onMedicamentosClick()
+                    },
+                    icon = { Icon(Icons.Default.Medication, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Metas de Salud") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onMetasClick()
+                    },
+                    icon = { Icon(Icons.Default.EmojiEvents, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Reportes Generales") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onReportesClick()
+                    },
+                    icon = { Icon(Icons.Default.Assessment, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Directorio Médico") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onDirectoryClick()
+                    },
+                    icon = { Icon(Icons.Default.LocalHospital, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Descargar Reporte PDF") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        showDownloadDialog = true
+                    },
+                    icon = { Icon(Icons.Default.PictureAsPdf, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+
+                NavigationDrawerItem(
+                    label = { Text("Cerrar Sesión") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onLogout()
+                    },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedTextColor = Color.Red, unselectedIconColor = Color.Red)
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "GOBIERNO DE MÉXICO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Dorado4T,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "HealthTrack",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Rounded.Menu, "Menú", tint = Color.White)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onLogout) {
+                            Icon(Icons.AutoMirrored.Filled.Logout, "Salir", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Guinda4T)
+                )
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
+                ) {
+                    NavigationBarItem(
+                        selected = true,
+                        onClick = { },
+                        icon = { Icon(Icons.Default.Home, null) },
+                        label = { Text("Inicio") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Guinda4T,
+                            indicatorColor = Dorado4T.copy(alpha = 0.2f)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onPrevencionClick,
+                        icon = { Icon(Icons.Default.Psychology, null) },
+                        label = { Text("IA") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onCitasClick,
+                        icon = { Icon(Icons.Default.DateRange, null) },
+                        label = { Text("Citas") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onProfileClick,
+                        icon = { Icon(Icons.Default.Person, null) },
+                        label = { Text("Perfil") }
+                    )
+                }
+            },
+            containerColor = Fondo4T
+        ) { paddingValues ->
+            if (state.isLoading) {
+                DashboardShimmer(paddingValues)
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
+                ) {
+                    item {
                         Text(
                             text = "Hola, $userName",
-                            fontSize = 24.sp,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = Guinda4T
                         )
+                    }
+
+                    // Pilar 1: Módulo de Prevención IA Destacado
+                    item {
+                        state.sugerenciaIA?.let { sugerencia ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .semantics(mergeDescendants = true) {
+                                        contentDescription = "Sugerencia Preventiva IA: ${sugerencia.mensaje}"
+                                    },
+                                colors = CardDefaults.cardColors(containerColor = Guinda4T),
+                                elevation = CardDefaults.cardElevation(8.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Psychology,
+                                        contentDescription = "IA",
+                                        tint = Dorado4T,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = "Sugerencia Preventiva IA",
+                                            color = Dorado4T,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = sugerencia.mensaje ?: "",
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            lineHeight = 18.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Pilar 1: Carrusel de Métricas Críticas
+                    item {
                         Text(
-                            text = "Estrategia Nacional de Monitoreo Crónico",
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                            text = "Estado de Salud Crítico",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Guinda4T,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(2.dp)
-                                .background(Dorado4T)
-                        )
-                    }
-                }
-
-                // Sección 1: Métricas de Salud (Grid simulado)
-                item {
-                    Text(
-                        text = "Métricas de Salud Recientes",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Guinda4T,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 8.dp)
                         ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                MetricCard(
+                            item {
+                                MetricMiniCard(
                                     title = "Glucosa",
-                                    value = state.ultimaGlucosa?.valor?.let { "${it.toInt()} mg/dL" } ?: "Sin datos",
-                                    status = state.ultimaGlucosa?.let { 
-                                        if (it.valor <= 125.0) "Normal" else "Atención"
-                                    } ?: "N/A",
+                                    value = state.ultimaGlucosa?.valor?.let { "${it.toInt()}" } ?: "--",
+                                    unit = "mg/dL",
                                     icon = Icons.Default.Bloodtype,
-                                    isWarning = state.ultimaGlucosa?.let { it.valor > 125.0 } ?: false
+                                    isWarning = (state.ultimaGlucosa?.valor ?: 0.0) > 125.0
                                 )
                             }
-                            Box(modifier = Modifier.weight(1f)) {
-                                val presionSistolica = state.ultimaPresion?.valor ?: 0.0
-                                val presionDiastolica = state.ultimaPresion?.valorSecundario ?: 0.0
-                                val isHigh = presionSistolica > 140.0 || presionDiastolica > 90.0
-                                val hasData = state.ultimaPresion != null
-                                
-                                MetricCard(
-                                    title = "Presión Arterial",
-                                    value = if (hasData) "${presionSistolica.toInt()}/${presionDiastolica.toInt()}" else "Sin datos",
-                                    status = if (hasData) {
-                                        if (isHigh) "Atención" else "Normal"
-                                    } else "N/A",
+                            item {
+                                val sis = state.ultimaPresion?.valor?.toInt() ?: 0
+                                val dia = state.ultimaPresion?.valorSecundario?.toInt() ?: 0
+                                MetricMiniCard(
+                                    title = "Presión",
+                                    value = if (sis > 0) "$sis/$dia" else "--",
+                                    unit = "mmHg",
                                     icon = Icons.Default.Speed,
-                                    isWarning = hasData && isHigh
+                                    isWarning = sis > 135 || dia > 85
                                 )
                             }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                MetricCard(
-                                    title = "Ritmo Cardíaco",
-                                    value = state.ultimaFrecuencia?.valor?.let { "${it.toInt()} lpm" } ?: "Sin datos",
-                                    status = state.ultimaFrecuencia?.let { 
-                                        if (it.valor <= 100.0) "Normal" else "Atención"
-                                    } ?: "N/A",
+                            item {
+                                MetricMiniCard(
+                                    title = "Ritmo",
+                                    value = state.ultimaFrecuencia?.valor?.let { "${it.toInt()}" } ?: "--",
+                                    unit = "lpm",
                                     icon = Icons.Default.Favorite,
-                                    isWarning = state.ultimaFrecuencia?.let { it.valor > 100.0 } ?: false
-                                )
-                            }
-                            Box(modifier = Modifier.weight(1f)) {
-                                MetricCard(
-                                    title = "Peso Corporal",
-                                    value = state.ultimoPeso?.valor?.let { "$it kg" } ?: "Sin datos",
-                                    status = if (state.ultimoPeso != null) "Registrado" else "N/A",
-                                    icon = Icons.Default.Scale,
-                                    isWarning = false
+                                    isWarning = (state.ultimaFrecuencia?.valor ?: 0.0) > 100.0
                                 )
                             }
                         }
                     }
-                }
 
-                // Sección 2: Recomendaciones Médicas
-                item {
-                    Text(
-                        text = "Recomendaciones Médicas",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Guinda4T,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
-
-                if (state.recomendaciones.isEmpty()) {
+                    // Otras secciones (Recomendaciones)
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "No tienes recomendaciones médicas pendientes.",
-                                color = Color.Gray,
-                                modifier = Modifier.padding(16.dp),
-                                textAlign = TextAlign.Center
-                            )
+                        Text(
+                            text = "Recomendaciones Médicas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Guinda4T
+                        )
+                    }
+                    
+                    if (state.recomendaciones.isEmpty()) {
+                        item {
+                            Text("No hay recomendaciones nuevas", color = Color.Gray, fontSize = 14.sp)
                         }
-                    }
-                } else {
-                    items(state.recomendaciones) { recomendacion ->
-                        RecommendationCard(recomendacion)
-                    }
-                }
-
-                // Sección 3: Logros de Salud
-                item {
-                    Text(
-                        text = "Mis Logros de Salud",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Guinda4T,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                }
-
-                if (state.logros.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "Continúa registrando tus métricas para desbloquear logros.",
-                                color = Color.Gray,
-                                modifier = Modifier.padding(16.dp),
-                                textAlign = TextAlign.Center
-                            )
+                    } else {
+                        items(state.recomendaciones.take(3)) { rec ->
+                            RecommendationItem(rec)
                         }
-                    }
-                } else {
-                    items(state.logros) { logro ->
-                        LogroCard(logro)
                     }
                 }
             }
@@ -357,192 +463,135 @@ fun DashboardScreen(
 }
 
 @Composable
-fun MetricCard(
+fun DashboardShimmer(paddingValues: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Título "Hola, Usuario" shimmer
+        Box(
+            modifier = Modifier
+                .width(200.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .shimmerEffect()
+        )
+        
+        // Tarjeta IA shimmer
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .shimmerEffect()
+        )
+        
+        // Título "Estado Crítico" shimmer
+        Box(
+            modifier = Modifier
+                .width(150.dp)
+                .height(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmerEffect()
+        )
+
+        // Carrusel de Métricas shimmer
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 130.dp, height = 110.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .shimmerEffect()
+                )
+            }
+        }
+        
+        // Título "Recomendaciones" shimmer
+        Box(
+            modifier = Modifier
+                .width(180.dp)
+                .height(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmerEffect()
+        )
+
+        // Lista de Recomendaciones shimmer
+        repeat(2) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmerEffect()
+            )
+        }
+    }
+}
+
+@Composable
+fun MetricMiniCard(
     title: String,
     value: String,
-    status: String,
+    unit: String,
     icon: ImageVector,
     isWarning: Boolean
 ) {
-    val containerColor = if (isWarning) Color(0xFFFDE8E8) else Color.White
-    val contentColor = if (isWarning) Color(0xFFC81E1E) else Guinda4T
-    val statusColor = if (status == "Normal") VerdeSalud4T else if (status == "Atención") Color(0xFFC81E1E) else Color.Gray
-
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier
+            .size(width = 130.dp, height = 110.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Métrica de $title: $value $unit. ${if (isWarning) "Estado de alerta" else "Estado normal"}"
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isWarning) Color(0xFFFDE8E8) else MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Gray
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = if (isWarning) Color.Red else Guinda4T, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(title, fontSize = 11.sp, color = Color.Gray)
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = status,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = statusColor
-            )
+            Spacer(Modifier.weight(1f))
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Black, color = if (isWarning) Color.Red else Guinda4T)
+            Text(unit, fontSize = 10.sp, color = Color.Gray)
         }
     }
 }
 
 @Composable
-fun RecommendationCard(rec: Recomendacion) {
-    val formattedDate = remember(rec.fechaEnvio) {
-        if (rec.fechaEnvio > 0) {
-            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-            sdf.format(Date(rec.fechaEnvio))
-        } else ""
-    }
-
-    val badgeColor = when (rec.prioridad?.uppercase()) {
-        "ALTA" -> Color(0xFFC81E1E)
-        "MEDIA" -> Dorado4T
-        else -> VerdeSalud4T
-    }
-
+fun RecommendationItem(rec: Recomendacion) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.5.dp, Guinda4T, RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF4EB)),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = rec.medicoNombre ?: "Recomendación Médica",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = Guinda4T
-                )
-                
-                Surface(
-                    color = badgeColor,
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Text(
-                        text = rec.prioridad ?: "MEDIA",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = rec.mensaje ?: "",
-                fontSize = 14.sp,
-                color = Color(0xFF2C3E50),
-                lineHeight = 20.sp
-            )
-            if (formattedDate.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Enviado: $formattedDate",
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LogroCard(logro: HistorialLogro) {
-    val formattedDate = remember(logro.timestamp) {
-        if (logro.timestamp > 0) {
-            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            sdf.format(Date(logro.timestamp))
-        } else ""
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Recomendación de ${rec.medicoNombre}: ${rec.mensaje}. Prioridad ${rec.prioridad}"
+            },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFFFEF3C7), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.EmojiEvents,
-                    contentDescription = "Logro",
-                    tint = Dorado4T,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(4.dp, 40.dp).background(if (rec.prioridad == "ALTA") Color.Red else Dorado4T))
+            Spacer(Modifier.width(12.dp))
+            Column {
                 Text(
-                    text = logro.titulo ?: "",
+                    text = rec.medicoNombre ?: "Médico",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = Guinda4T
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = logro.descripcion ?: "",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-            if (formattedDate.isNotEmpty()) {
-                Text(
-                    text = formattedDate,
-                    fontSize = 11.sp,
-                    color = Color.LightGray,
-                    modifier = Modifier.padding(start = 8.dp)
+                    text = rec.mensaje ?: "",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3
                 )
             }
         }

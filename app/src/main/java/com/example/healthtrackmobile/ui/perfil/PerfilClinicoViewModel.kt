@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.healthtrackmobile.model.PerfilPaciente
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 sealed interface PerfilClinicoUiState {
     data object Idle : PerfilClinicoUiState
@@ -29,10 +31,12 @@ class PerfilClinicoViewModel : ViewModel() {
         _uiState.value = PerfilClinicoUiState.Loading
         viewModelScope.launch {
             try {
-                val doc = db.collection("perfiles_pacientes")
-                    .document(userId)
-                    .get()
-                    .await()
+                val doc = withContext(Dispatchers.IO) {
+                    db.collection("perfiles_pacientes")
+                        .document(userId)
+                        .get()
+                        .await()
+                }
 
                 if (doc.exists()) {
                     val perfil = doc.toObject(PerfilPaciente::class.java) ?: PerfilPaciente(id = userId)
@@ -91,10 +95,12 @@ class PerfilClinicoViewModel : ViewModel() {
                     "antecedentes" to antecedentes.trim().ifBlank { "Ninguna" }
                 )
 
-                db.collection("perfiles_pacientes")
-                    .document(userId)
-                    .set(datos, SetOptions.merge())
-                    .await()
+                withContext(Dispatchers.IO) {
+                    db.collection("perfiles_pacientes")
+                        .document(userId)
+                        .set(datos, SetOptions.merge())
+                        .await()
+                }
 
                 _uiState.value = PerfilClinicoUiState.SavedSuccess
             } catch (e: Exception) {

@@ -4,11 +4,12 @@ import com.example.healthtrackmobile.model.Metrica
 import com.example.healthtrackmobile.model.Recomendacion
 import com.example.healthtrackmobile.model.Usuario
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
-import java.time.LocalDate
-import java.time.Month
+import java.util.Calendar
 import java.util.Locale
 
 data class ClimaResponse(
@@ -19,7 +20,8 @@ data class ClimaResponse(
     var disponible: Boolean = false,
     var mensajeError: String? = null,
     var calidadAire: String = "",
-    var calidadAireRiesgosa: Boolean = false
+    var calidadAireRiesgosa: Boolean = false,
+    var aqiValue: Int = 0
 )
 
 data class AlertaSanitariaResponse(
@@ -36,6 +38,7 @@ class RecommendationEngine {
     private val airUrl = "https://air-quality-api.open-meteo.com/v1/air-quality"
     private val diseaseUrl = "https://disease.sh/v3/covid-19/countries/"
     private val fruityviceUrl = "https://www.fruityvice.com/api/fruit/"
+    private val ipApiUrl = "https://ipapi.co/json/"
 
     private val consejosNutricionales = listOf(
         "Recuerda mantenerte hidratado: bebe al menos 2 litros de agua al día.",
@@ -50,17 +53,23 @@ class RecommendationEngine {
     )
 
     private fun httpGet(urlString: String, timeoutMs: Int = 4000): String {
-        val url = URL(urlString)
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.connectTimeout = timeoutMs
-        conn.readTimeout = timeoutMs
-        if (conn.responseCode in 200..299) {
-            conn.inputStream.use { stream ->
-                return stream.bufferedReader().use { it.readText() }
+        try {
+            val url = URL(urlString)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.connectTimeout = timeoutMs
+            conn.readTimeout = timeoutMs
+            if (conn.responseCode in 200..299) {
+                conn.inputStream.use { stream ->
+                    return stream.bufferedReader().use { it.readText() }
+                }
+            } else {
+                throw IOException("HTTP Error: ${conn.responseCode}")
             }
-        } else {
-            throw Exception("HTTP Error: ${conn.responseCode}")
+        } catch (e: SocketTimeoutException) {
+            throw IOException("Timeout de red al conectar con el servicio externo")
+        } catch (e: Exception) {
+            throw IOException("Falla de conexión: ${e.message}")
         }
     }
 
@@ -73,7 +82,14 @@ class RecommendationEngine {
         }
 
         if (queryName.isBlank()) {
-            return getSimulatedWeather("General")
+            try {
+                // Intento detectar ubicación por IP
+                val ipRes = httpGet(ipApiUrl)
+                val ipJson = JSONObject(ipRes)
+                queryName = ipJson.optString("city", "Celaya")
+            } catch (e: Exception) {
+                queryName = "Celaya"
+            }
         }
 
         try {
@@ -150,6 +166,7 @@ class RecommendationEngine {
                 val airJson = JSONObject(airResponseStr)
                 val airCurrent = airJson.getJSONObject("current")
                 val aqi = airCurrent.getInt("us_aqi")
+                clima.aqiValue = aqi
 
                 val label = when {
                     aqi <= 50 -> "Buena"
@@ -211,15 +228,15 @@ class RecommendationEngine {
 
         // Si no hay alertas externas activas, aplicar las del calendario estacional
         if (alertas.isEmpty()) {
-            val month = LocalDate.now().month
-            if (month == Month.MAY || month == Month.JUNE || month == Month.JULY || month == Month.AUGUST) {
+            val month = Calendar.getInstance().get(Calendar.MONTH) // 0-indexed: 0=Jan, 1=Feb, ...
+            if (month in Calendar.MAY..Calendar.AUGUST) {
                 return listOf(
                     AlertaSanitariaResponse(reg, "Golpe de Calor: Temperaturas elevadas registradas. Manténgase hidratado.", "ALTA", true),
                     AlertaSanitariaResponse(reg, "Contaminación por ozono en superficie: Alta radiación solar y nulo viento.", "ALTA", true),
                     AlertaSanitariaResponse(reg, "Dengue: Incremento estacional por lluvias. Evite criaderos de mosquitos.", "MEDIA", true)
                 )
             }
-            if (month == Month.NOVEMBER || month == Month.DECEMBER || month == Month.JANUARY || month == Month.FEBRUARY) {
+            if (month == Calendar.NOVEMBER || month == Calendar.DECEMBER || month == Calendar.JANUARY || month == Calendar.FEBRUARY) {
                 return listOf(
                     AlertaSanitariaResponse(reg, "Influenza estacional: Descenso de temperaturas e incremento de infecciones respiratorias.", "MEDIA", true)
                 )

@@ -22,10 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.healthtrackmobile.model.Recomendacion
 import com.example.healthtrackmobile.service.AlertaSanitariaResponse
 import com.example.healthtrackmobile.service.ClimaResponse
 import com.example.healthtrackmobile.theme.*
+import com.example.healthtrackmobile.util.shimmerEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,22 +93,7 @@ fun PrevencionScreen(
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->
         if (state.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Guinda4T)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Analizando contexto clínico y ambiental...",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
-                }
-            }
+            PrevencionShimmer(paddingValues)
         } else if (state.error != null) {
             Box(
                 modifier = Modifier
@@ -174,6 +163,31 @@ fun PrevencionScreen(
                                 .height(2.dp)
                                 .background(Dorado4T)
                         )
+                    }
+                }
+
+                // Banner de Modo Offline
+                if (state.isOfflineMode) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Dorado4T),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.WifiOff, null, tint = Guinda4T)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = "Modo sin conexión. Mostrando recomendaciones generales estacionales.",
+                                    color = Guinda4T,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -267,12 +281,71 @@ fun PrevencionScreen(
 }
 
 @Composable
+fun PrevencionShimmer(paddingValues: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmerEffect()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .shimmerEffect()
+        )
+        Box(
+            modifier = Modifier
+                .width(200.dp)
+                .height(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .shimmerEffect()
+        )
+        repeat(2) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmerEffect()
+            )
+        }
+    }
+}
+
+@Composable
 fun WeatherCard(clima: ClimaResponse) {
-    val aqiColor = if (clima.calidadAireRiesgosa) Color(0xFFC81E1E) else VerdeSalud4T
-    val airLabel = if (clima.calidadAireRiesgosa) "RIESGO" else "SALUDABLE"
+    val aqiColor = when {
+        clima.aqiValue <= 50 -> VerdeSalud4T
+        clima.aqiValue <= 100 -> Color(0xFFEAB308) // Dorado/Amarillo
+        else -> Color(0xFFC81E1E) // Rojo
+    }
+    val airLabel = when {
+        clima.aqiValue <= 50 -> "SALUDABLE"
+        clima.aqiValue <= 100 -> "MODERADA"
+        else -> "RIESGO"
+    }
+    val airBgColor = when {
+        clima.aqiValue <= 50 -> Color(0xFFE6F4EA)
+        clima.aqiValue <= 100 -> Color(0xFFFEF9C3)
+        else -> Color(0xFFFDE8E8)
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Clima en ${clima.ciudad}: ${clima.temperatura.toInt()} grados, ${clima.condicion}. Calidad del aire $airLabel."
+            },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)
@@ -302,7 +375,7 @@ fun WeatherCard(clima: ClimaResponse) {
                 }
 
                 Surface(
-                    color = if (clima.calidadAireRiesgosa) Color(0xFFFDE8E8) else Color(0xFFE6F4EA),
+                    color = airBgColor,
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
@@ -367,7 +440,10 @@ fun AlertaSanitariaCard(alerta: AlertaSanitariaResponse) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderStrokeColor, RoundedCornerShape(8.dp)),
+            .border(1.dp, borderStrokeColor, RoundedCornerShape(8.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Alerta Sanitaria en ${alerta.region}: ${alerta.descripcion}. Nivel de riesgo ${alerta.nivelRiesgo}."
+            },
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -427,8 +503,8 @@ fun AlertaSanitariaCard(alerta: AlertaSanitariaResponse) {
 fun SugerenciaIACard(sugerencia: Recomendacion) {
     val leftBorderColor = when (sugerencia.prioridad?.uppercase()) {
         "ALTA" -> Guinda4T
-        "INFO" -> Dorado4T
-        else -> VerdeSalud4T // ej. MEDIA/BAJA
+        "MEDIA" -> Dorado4T
+        else -> VerdeSalud4T // ej. BAJA
     }
 
     val badgeColor = when (sugerencia.prioridad?.uppercase()) {
@@ -440,8 +516,11 @@ fun SugerenciaIACard(sugerencia: Recomendacion) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFFEDEDED), RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF4EB)),
+            .border(1.dp, Color(0xFFEDEDED), RoundedCornerShape(12.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Sugerencia de Prevención IA: ${sugerencia.mensaje}. Prioridad ${sugerencia.prioridad}."
+            },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -513,7 +592,7 @@ fun SugerenciaIACard(sugerencia: Recomendacion) {
                 Text(
                     text = sugerencia.mensaje ?: "",
                     fontSize = 13.sp,
-                    color = Color(0xFF2C3E50),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 19.sp
                 )
             }

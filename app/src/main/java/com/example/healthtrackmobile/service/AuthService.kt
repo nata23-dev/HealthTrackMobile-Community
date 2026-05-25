@@ -8,12 +8,12 @@ import kotlinx.coroutines.tasks.await
 class AuthService {
     private val db = FirebaseFirestore.getInstance()
 
-    suspend fun login(email: String, password: CharSequence): Result<Usuario> {
+    suspend fun login(email: String, password: CharSequence): Result<Usuario> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (email.isBlank() || password.isBlank()) {
-            return Result.failure(IllegalArgumentException("Email y contraseña no pueden estar vacíos"))
+            return@withContext Result.failure(IllegalArgumentException("Email y contraseña no pueden estar vacíos"))
         }
 
-        return try {
+        return@withContext try {
             val snapshot = db.collection("usuarios")
                 .whereEqualTo("correo", email.trim())
                 .limit(1)
@@ -21,21 +21,21 @@ class AuthService {
                 .await()
 
             if (snapshot.isEmpty) {
-                return Result.failure(Exception("Usuario no encontrado o contraseña incorrecta"))
+                return@withContext Result.failure(Exception("Usuario no encontrado o contraseña incorrecta"))
             }
 
             val document = snapshot.documents.first()
             val usuario = document.toObject(Usuario::class.java)
-                ?: return Result.failure(Exception("Error al procesar los datos del usuario"))
+                ?: return@withContext Result.failure(Exception("Error al procesar los datos del usuario"))
 
             // Validar contraseña
             if (!PasswordUtils.verifyPassword(password.toString(), usuario.password)) {
-                return Result.failure(Exception("Usuario no encontrado o contraseña incorrecta"))
+                return@withContext Result.failure(Exception("Usuario no encontrado o contraseña incorrecta"))
             }
 
             // Validar que la cuenta esté activa
             if (!usuario.activo) {
-                return Result.failure(Exception("CUENTA_INACTIVA"))
+                return@withContext Result.failure(Exception("CUENTA_INACTIVA"))
             }
 
             usuario.id = document.id
@@ -45,9 +45,9 @@ class AuthService {
         }
     }
 
-    suspend fun existeCorreo(email: String): Boolean {
-        if (email.isBlank()) return false
-        return try {
+    suspend fun existeCorreo(email: String): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (email.isBlank()) return@withContext false
+        return@withContext try {
             val snapshot = db.collection("usuarios")
                 .whereEqualTo("correo", email.trim())
                 .limit(1)

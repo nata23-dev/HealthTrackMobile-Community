@@ -4,7 +4,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import com.example.healthtrackmobile.model.RecordatorioMedicamento
 import java.text.SimpleDateFormat
@@ -46,20 +45,12 @@ object ReminderScheduler {
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
-            }
-            Log.d(TAG, "Programada alarma para ${reminder.medicamento} a las: ${Date(triggerTime)}")
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+            Log.d(TAG, "Programada alarma exacta para ${reminder.medicamento} a las: ${Date(triggerTime)}")
         } catch (e: SecurityException) {
             Log.e(TAG, "Error de permisos para programar alarma exacta", e)
         }

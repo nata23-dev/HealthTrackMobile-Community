@@ -552,7 +552,7 @@ fun CitaRowCard(
                         .fillMaxWidth()
                         .height(36.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFFC81E1E)
+                        contentColor = MaterialTheme.colorScheme.error
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF87171)),
                     shape = RoundedCornerShape(6.dp),

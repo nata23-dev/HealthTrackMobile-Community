@@ -9,81 +9,49 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
-sealed interface AgregarMetricaUiState {
-    data object Idle : AgregarMetricaUiState
-    data object Loading : AgregarMetricaUiState
-    data object Success : AgregarMetricaUiState
-    data class Error(val message: String) : AgregarMetricaUiState
-}
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AgregarMetricaViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
-    private val _uiState = MutableStateFlow<AgregarMetricaUiState>(AgregarMetricaUiState.Idle)
-    val uiState: StateFlow<AgregarMetricaUiState> = _uiState.asStateFlow()
+    
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
-    fun guardarMetrica(
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun guardarMetricas(
         userId: String,
-        tipo: String,
-        valorStr: String,
-        valorSecundarioStr: String,
-        comentario: String
+        metricas: List<Metrica>,
+        onSuccess: () -> Unit
     ) {
-        if (valorStr.isBlank()) {
-            _uiState.value = AgregarMetricaUiState.Error("El valor de la medición es obligatorio.")
-            return
-        }
-
-        val valor = valorStr.toDoubleOrNull()
-        if (valor == null || valor <= 0) {
-            _uiState.value = AgregarMetricaUiState.Error("El valor debe ser un número positivo.")
-            return
-        }
-
-        var valorSecundario = 0.0
-        if (tipo == "PRESION") {
-            if (valorSecundarioStr.isBlank()) {
-                _uiState.value = AgregarMetricaUiState.Error("La presión diastólica es obligatoria.")
-                return
-            }
-            val valSec = valorSecundarioStr.toDoubleOrNull()
-            if (valSec == null || valSec <= 0) {
-                _uiState.value = AgregarMetricaUiState.Error("La presión diastólica debe ser un número positivo.")
-                return
-            }
-            valorSecundario = valSec
-        }
-
-        _uiState.value = AgregarMetricaUiState.Loading
+        _isSaving.value = true
+        _error.value = null
 
         viewModelScope.launch {
             try {
-                val nuevaMetrica = Metrica(
-                    pacienteId = userId,
-                    tipo = tipo,
-                    valor = valor,
-                    valorSecundario = valorSecundario,
-                    comentario = comentario.trim().ifBlank { null },
-                    timestamp = System.currentTimeMillis()
-                )
-
-                // Guardar en Firestore (genera un ID aleatorio automáticamente)
-                db.collection("metricas")
-                    .add(nuevaMetrica)
-                    .await()
-
-                _uiState.value = AgregarMetricaUiState.Success
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    metricas.forEach { metrica ->
+                        metrica.pacienteId = userId
+                        metrica.timestamp = System.currentTimeMillis()
+                        
+                        val task = db.collection("metricas").add(metrica)
+                        // Intentamos esperar al servidor por un breve momento (UX óptima)
+                        try {
+                            withTimeoutOrNull(2000) {
+                                task.await()
+                            }
+                        } catch (e: Exception) {
+                            // Si falla (ej. offline), Firestore maneja la re-sincronización automáticamente
+                        }
+                    }
+                }
+                _isSaving.value = false
+                onSuccess()
             } catch (e: Exception) {
-                _uiState.value = AgregarMetricaUiState.Error(
-                    e.message ?: "Ocurrió un error al guardar el registro en la base de datos."
-                )
+                _isSaving.value = false
+                _error.value = e.message ?: "Error al guardar los registros"
             }
-        }
-    }
-
-    fun clearError() {
-        if (_uiState.value is AgregarMetricaUiState.Error) {
-            _uiState.value = AgregarMetricaUiState.Idle
         }
     }
 }

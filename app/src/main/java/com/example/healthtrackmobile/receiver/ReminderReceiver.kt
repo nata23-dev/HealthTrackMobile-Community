@@ -53,6 +53,9 @@ class ReminderReceiver : BroadcastReceiver() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notificaciones para recordatorios de toma de medicamentos"
+                enableLights(true)
+                lightColor = 0xFF621132.toInt()
+                enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -67,10 +70,12 @@ class ReminderReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm) // Icono del sistema por defecto
-            .setContentTitle("Hora de tomar tu medicamento 💊")
-            .setContentText("Es hora de tomar $medName ($dosis)")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("Hora de tu medicamento: $medName")
+            .setContentText("Dosis: $dosis")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setColor(0xFF621132.toInt()) // Guinda institucional
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()

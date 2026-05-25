@@ -14,16 +14,15 @@ private val DarkColorScheme = darkColorScheme(primary = Guinda4T, secondary = Do
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = Guinda4T,
-    secondary = Dorado4T,
-    tertiary = VerdeSalud4T,
-    background = Fondo4T,
-    surface = androidx.compose.ui.graphics.Color.White,
+    primary = GuindaOficial,
     onPrimary = androidx.compose.ui.graphics.Color.White,
-    onSecondary = Guinda4T,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
-    onBackground = androidx.compose.ui.graphics.Color(0xFF2C3E50),
-    onSurface = androidx.compose.ui.graphics.Color(0xFF2C3E50),
+    secondary = DoradoOficial,
+    onSecondary = androidx.compose.ui.graphics.Color.White,
+    tertiary = VerdeSalud4T,
+    background = FondoClaro,
+    surface = SuperficieBlanca,
+    onBackground = TextoPrincipal,
+    onSurface = TextoPrincipal,
   )
 
 @Composable
