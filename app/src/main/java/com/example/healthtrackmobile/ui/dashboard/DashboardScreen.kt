@@ -330,7 +330,7 @@ fun DashboardScreen(
                     )
 
                     // Métricas locales para posibilitar smart-cast
-                    val ultimoPeso = state.ultimoPeso?.valor ?: 0.0
+                    val ultimoPeso = state.ultimoPeso?.valor ?: state.perfil?.pesoInicial ?: 0.0
                     val estaturaCm = state.perfil?.estatura ?: 0.0
                     val estaturaM = estaturaCm / 100.0
                     val imcVal = if (ultimoPeso > 0.0 && estaturaM > 0.0) {

@@ -108,6 +108,20 @@ class PerfilClinicoViewModel : ViewModel() {
                         .document(userId)
                         .set(datos, SetOptions.merge())
                         .await()
+
+                    if (pesoInicial != null && pesoInicial > 0.0) {
+                        val metricaPeso = hashMapOf(
+                            "paciente_id" to userId,
+                            "tipo" to "PESO",
+                            "valor" to pesoInicial,
+                            "timestamp" to System.currentTimeMillis(),
+                            "comentario" to "Actualización desde ficha clínica"
+                        )
+                        db.collection("metricas").add(metricaPeso).await()
+
+                        // Sincronizar dinámicamente con metas activas de peso
+                        actualizarMetaActiva(userId, "PESO", pesoInicial)
+                    }
                 }
 
                 _uiState.value = PerfilClinicoUiState.SavedSuccess
@@ -116,6 +130,27 @@ class PerfilClinicoViewModel : ViewModel() {
                     e.message ?: "Error al guardar los datos de tu ficha clínica."
                 )
             }
+        }
+    }
+
+    private suspend fun actualizarMetaActiva(userId: String, tipoMetrica: String, nuevoValor: Double) {
+        try {
+            val querySnapshot = db.collection("metas")
+                .whereEqualTo("paciente_id", userId)
+                .whereEqualTo("tipo_metrica", tipoMetrica)
+                .get()
+                .await()
+
+            for (doc in querySnapshot.documents) {
+                val estado = doc.getString("estado") ?: ""
+                if (estado.uppercase().trim() == "ACTIVA") {
+                    db.collection("metas").document(doc.id)
+                        .update("valor_actual", nuevoValor)
+                        .await()
+                }
+            }
+        } catch (e: Exception) {
+            // Ignorar silenciosamente
         }
     }
 
