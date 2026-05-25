@@ -1,4 +1,4 @@
-# 📱 HealthTrack Mobile - Aplicación de Monitoreo de Salud Familiar
+# HealthTrack Mobile - Aplicación de Monitoreo de Salud Familiar
 
 Bienvenido a **HealthTrack Mobile**, la versión móvil de la plataforma HealthTrack, desarrollada nativamente en **Kotlin** y **Jetpack Compose** para Android. Esta aplicación está diseñada bajo una paleta de colores institucional y premium (Guinda, Dorado, Gris Claro y Blanco), ofreciendo una interfaz accesible, moderna e interactiva para el cuidado preventivo y el monitoreo de la salud familiar.
 
@@ -6,7 +6,7 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 
 ---
 
-## 🎯 Características Principales
+## Características Principales
 
 ### 1. Panel de Control Interactivo (Dashboard)
 * **Resumen Fisiológico:** Visualización de métricas críticas como el Índice de Masa Corporal (IMC), Frecuencia Cardíaca, niveles de Glucosa y el avance en las Metas de Salud diarias.
@@ -35,9 +35,9 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 
 ---
 
-## 📖 Manual de Uso y Operación
+## Manual de Uso y Operación
 
-### 🔐 1. Registro e Inicio de Sesión
+### 1. Registro e Inicio de Sesión
 1. **Creación de Cuenta:**
    * En la pantalla inicial, haz clic en **Registrarse**.
    * Introduce tu Nombre Completo, Correo Electrónico, Teléfono, CURP y establece una contraseña.
@@ -45,12 +45,12 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 2. **Inicio de Sesión:**
    * Introduce tu correo y contraseña registrados para ingresar. La aplicación cuenta con inicio de sesión automático persistente para que no debas reingresar tus credenciales en cada apertura.
 
-### 📋 2. Onboarding y Ficha Clínica (Primer Ingreso)
+### 2. Onboarding y Ficha Clínica (Primer Ingreso)
 * Al ingresar por primera vez, se te redirigirá automáticamente a la pantalla de **Ficha Clínica**. El acceso al resto de las secciones estará bloqueado hasta que completes este registro inicial.
 * **Campos Requeridos:** Fecha de nacimiento, estatura, peso inicial, tipo de sangre, alergias y antecedentes patológicos/heredofamiliares.
 * Guarda los cambios para desbloquear el Dashboard principal.
 
-### 📈 3. Registro de Métricas y Consulta de Tendencias
+### 3. Registro de Métricas y Consulta de Tendencias
 1. **Añadir Métrica:**
    * Desde la pestaña del menú inferior, ve a la sección de **Registro** (ícono de suma `+`).
    * Selecciona el tipo de métrica (Glucosa, Presión, Peso o Pulso) e introduce los valores numéricos correspondientes.
@@ -58,7 +58,7 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
    * Ve a la sección de **Tendencias** para ver el histórico de los últimos días en gráficas dinámicas de Canvas. 
    * Podrás cambiar entre métricas usando los chips interactivos en la parte superior para visualizar las curvas de comportamiento y sus gradientes de color.
 
-### 👥 4. Operación del Módulo "Mi Familia"
+### 4. Operación del Módulo "Mi Familia"
 1. **Buscar y Agregar un Familiar:**
    * Despliega el menú lateral (Drawer) y selecciona la pestaña **Mi Familia**.
    * Escribe el nombre del familiar en la barra de búsqueda superior y presiona **Buscar**.
@@ -71,7 +71,7 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 3. **Desvincular Familiar:**
    * Puedes presionar el ícono de bote de basura en la tarjeta del familiar en tu lista para removerlo del grupo familiar.
 
-### ⏰ 5. Gestión de Medicamentos
+### 5. Gestión de Medicamentos
 1. **Agregar Recordatorio:**
    * Ve a la pestaña **Medicamentos**.
    * Escribe el nombre del fármaco, dosis, intervalo de horas (ej. cada 8 horas) y la hora inicial de la toma.
@@ -79,7 +79,7 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 2. **Eliminar Recordatorio:**
    * Presiona el ícono de eliminar junto al medicamento. Esto cancelará de forma inmediata las alarmas en el sistema operativo y removerá el registro del servidor.
 
-### 📅 6. Citas y Directorio Médico
+### 6. Citas y Directorio Médico
 1. **Directorio:**
    * Busca médicos por especialidad o clínicas por nombre en el buscador del directorio.
    * Si necesitas contactarlos de urgencia, presiona el botón del teléfono para abrir el marcador nativo de llamadas de tu dispositivo.
@@ -89,7 +89,7 @@ HealthTrack Mobile se conecta de forma directa y bidireccional con una base de d
 
 ---
 
-## 🛠️ Requisitos de Desarrollo e Instalación
+## Requisitos de Desarrollo e Instalación
 
 ### Requisitos Previos
 * **Android Studio:** Jellyfish / Ladybug (o posterior).
