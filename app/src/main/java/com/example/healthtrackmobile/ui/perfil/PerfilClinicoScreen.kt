@@ -38,6 +38,7 @@ fun PerfilClinicoScreen(
 
     var fechaNacimiento by remember { mutableStateOf("") }
     var estaturaStr by remember { mutableStateOf("") }
+    var pesoInicialStr by remember { mutableStateOf("") }
     var grupoSanguineo by remember { mutableStateOf("O+") }
     var alergias by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
@@ -59,6 +60,7 @@ fun PerfilClinicoScreen(
             val perfil = (uiState as PerfilClinicoUiState.Success).perfil
             fechaNacimiento = perfil.fechaNacimiento ?: ""
             estaturaStr = if (perfil.estatura > 0) perfil.estatura.toString() else ""
+            pesoInicialStr = if (perfil.pesoInicial > 0) perfil.pesoInicial.toString() else ""
             grupoSanguineo = perfil.grupoSanguineo ?: "O+"
             alergias = perfil.alergias ?: ""
             direccion = perfil.direccion ?: ""
@@ -191,6 +193,28 @@ fun PerfilClinicoScreen(
                             },
                             label = { Text("Estatura (cm)") },
                             placeholder = { Text("ej: 175.5") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Guinda4T,
+                                focusedLabelColor = Guinda4T,
+                                cursorColor = Guinda4T
+                            )
+                        )
+
+                        // Peso Inicial
+                        OutlinedTextField(
+                            value = pesoInicialStr,
+                            onValueChange = { 
+                                pesoInicialStr = it
+                                viewModel.clearState()
+                            },
+                            label = { Text("Peso Inicial (kg)") },
+                            placeholder = { Text("ej: 70.2") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Number,
@@ -434,6 +458,7 @@ fun PerfilClinicoScreen(
                             fechaNacimiento = fechaNacimiento,
                             direccion = direccion,
                             estaturaStr = estaturaStr,
+                            pesoInicialStr = pesoInicialStr,
                             antecedentes = antStr
                         )
                     },

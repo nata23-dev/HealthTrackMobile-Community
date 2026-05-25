@@ -60,11 +60,18 @@ class PerfilClinicoViewModel : ViewModel() {
         fechaNacimiento: String,
         direccion: String,
         estaturaStr: String,
+        pesoInicialStr: String,
         antecedentes: String
     ) {
         val estatura = estaturaStr.toDoubleOrNull()
         if (estaturaStr.isNotBlank() && (estatura == null || estatura <= 0)) {
             _uiState.value = PerfilClinicoUiState.Error("La estatura debe ser un número positivo.")
+            return
+        }
+
+        val pesoInicial = pesoInicialStr.toDoubleOrNull()
+        if (pesoInicialStr.isNotBlank() && (pesoInicial == null || pesoInicial <= 0)) {
+            _uiState.value = PerfilClinicoUiState.Error("El peso inicial debe ser un número positivo.")
             return
         }
 
@@ -92,6 +99,7 @@ class PerfilClinicoViewModel : ViewModel() {
                     "fecha_nacimiento" to fechaNacimiento.trim().ifBlank { null },
                     "direccion" to direccion.trim().ifBlank { null },
                     "estatura_inicial" to (estatura ?: 0.0),
+                    "peso_inicial" to (pesoInicial ?: 0.0),
                     "antecedentes_cronicos" to antecedentes.trim().ifBlank { "Ninguna" }
                 )
 
