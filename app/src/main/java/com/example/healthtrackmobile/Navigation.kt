@@ -23,6 +23,7 @@ import com.example.healthtrackmobile.ui.metas.MetasScreen
 import com.example.healthtrackmobile.ui.reportes.ReportesScreen
 import com.example.healthtrackmobile.ui.onboarding.OnboardingScreen
 import com.example.healthtrackmobile.ui.onboarding.ConfiguracionInicialScreen
+import com.example.healthtrackmobile.ui.tendencias.TendenciasScreen
 import com.example.healthtrackmobile.util.SessionManager
 import com.example.healthtrackmobile.util.OnboardingManager
 import kotlinx.coroutines.flow.firstOrNull
@@ -103,6 +104,9 @@ fun MainNavigation() {
             },
             onCitasClick = {
               backStack.add(CitasMedicas(userId = mainKey.userId, userName = mainKey.userName))
+            },
+            onTendenciasClick = {
+              backStack.add(TendenciasDeSalud(userId = mainKey.userId))
             },
             onPrevencionClick = {
               backStack.add(PrevencionIA(userId = mainKey.userId))
@@ -202,6 +206,25 @@ fun MainNavigation() {
             userId = key.userId,
             onNavigateBack = {
               backStack.removeLastOrNull()
+            }
+          )
+        }
+        entry<TendenciasDeSalud> { key ->
+          val context = LocalContext.current
+          TendenciasScreen(
+            userId = key.userId,
+            onNavigateBack = { backStack.removeLastOrNull() },
+            onInicioClick = {
+              val userName = SessionManager.getUserName(context) ?: "Usuario"
+              backStack.clear()
+              backStack.add(Main(userId = key.userId, userName = userName))
+            },
+            onCitasClick = {
+              val userName = SessionManager.getUserName(context) ?: "Usuario"
+              backStack.add(CitasMedicas(userId = key.userId, userName = userName))
+            },
+            onProfileClick = {
+              backStack.add(PerfilClinico(userId = key.userId))
             }
           )
         }

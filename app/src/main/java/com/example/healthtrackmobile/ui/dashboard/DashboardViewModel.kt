@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.healthtrackmobile.model.*
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import androidx.compose.runtime.Immutable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -24,10 +23,20 @@ data class DashboardState(
     val metricasCriticas: ImmutableList<Metrica> = persistentListOf(),
     val recomendaciones: ImmutableList<Recomendacion> = persistentListOf(),
     val logros: ImmutableList<HistorialLogro> = persistentListOf(),
+    val notificaciones: ImmutableList<Notificacion> = persistentListOf(),
+    val notificacionesNoLeidas: Int = 0,
     val ultimaGlucosa: Metrica? = null,
     val ultimaPresion: Metrica? = null,
     val ultimaFrecuencia: Metrica? = null,
     val ultimoPeso: Metrica? = null
+)
+
+private data class DashboardCargaResult(
+    val metricas: List<Metrica>,
+    val recomendaciones: List<Recomendacion>,
+    val logros: List<HistorialLogro>,
+    val notificaciones: List<Notificacion>,
+    val sugerenciaIA: Recomendacion?
 )
 
 class DashboardViewModel : ViewModel() {
@@ -41,7 +50,6 @@ class DashboardViewModel : ViewModel() {
             try {
                 val data = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     // 1. Cargar todas las métricas del paciente para filtrar en memoria
-                    // Eliminamos orderBy para evitar errores de índice faltante en Firestore
                     val metricasSnapshot = db.collection("metricas")
                         .whereEqualTo("pacienteId", userId)
                         .get()
@@ -49,14 +57,12 @@ class DashboardViewModel : ViewModel() {
 
                     val listMetricas = metricasSnapshot.toObjects(Metrica::class.java)
                     
-                    // Aseguramos que los IDs se asignen correctamente
                     metricasSnapshot.documents.forEachIndexed { index, doc ->
                         if (index < listMetricas.size) {
                             listMetricas[index].id = doc.id
                         }
                     }
 
-                    // Ordenamos por timestamp descendente para obtener los más recientes primero
                     val sortedMetricas = listMetricas.sortedByDescending { it.timestamp }
 
                     // 2. Cargar recomendaciones
@@ -75,7 +81,15 @@ class DashboardViewModel : ViewModel() {
                     val listLogros = logrosSnapshot.toObjects(HistorialLogro::class.java)
                         .sortedByDescending { it.timestamp }
 
-                    // 4. Módulo de Prevención IA
+                    // 4. Cargar notificaciones
+                    val notifSnapshot = db.collection("notificaciones")
+                        .whereEqualTo("usuarioId", userId)
+                        .get()
+                        .await()
+                    val listNotif = notifSnapshot.toObjects(Notificacion::class.java)
+                        .sortedByDescending { it.fechaCreacion }
+
+                    // 5. Módulo de Prevención IA
                     val perfilDoc = db.collection("perfiles_pacientes").document(userId).get().await()
                     val perfil = perfilDoc.toObject(PerfilPaciente::class.java)
                     
@@ -86,33 +100,38 @@ class DashboardViewModel : ViewModel() {
                     
                     val sugerenciasIA = engine.generarSugerenciasIAPaciente(usuario, sortedMetricas, clima)
                     
-                    Triple(sortedMetricas, listRec, listLogros) to sugerenciasIA.firstOrNull()
+                    DashboardCargaResult(
+                        metricas = sortedMetricas,
+                        recomendaciones = listRec,
+                        logros = listLogros,
+                        notificaciones = listNotif,
+                        sugerenciaIA = sugerenciasIA.firstOrNull()
+                    )
                 }
-
-                val (lists, sugerenciaIA) = data
-                val (sortedMetricas, listRec, listLogros) = lists
 
                 _state.update {
                     it.copy(
                         isLoading = false,
                         error = null,
-                        sugerenciaIA = sugerenciaIA,
-                        metricasCriticas = sortedMetricas.toImmutableList(),
-                        recomendaciones = listRec.toImmutableList(),
-                        logros = listLogros.toImmutableList(),
-                        ultimaGlucosa = sortedMetricas.firstOrNull { m -> 
+                        sugerenciaIA = data.sugerenciaIA,
+                        metricasCriticas = data.metricas.toImmutableList(),
+                        recomendaciones = data.recomendaciones.toImmutableList(),
+                        logros = data.logros.toImmutableList(),
+                        notificaciones = data.notificaciones.toImmutableList(),
+                        notificacionesNoLeidas = data.notificaciones.count { n -> !n.leida },
+                        ultimaGlucosa = data.metricas.firstOrNull { m -> 
                             val t = m.tipo?.uppercase()?.trim()
                             t == "GLUCOSA" || t == "GLUCOSE"
                         },
-                        ultimaPresion = sortedMetricas.firstOrNull { m -> 
+                        ultimaPresion = data.metricas.firstOrNull { m -> 
                             val t = m.tipo?.uppercase()?.trim()
                             t == "PRESION" || t == "PRESSURE" || t == "TENSIÓN" || t == "PRESION_ARTERIAL"
                         },
-                        ultimaFrecuencia = sortedMetricas.firstOrNull { m -> 
+                        ultimaFrecuencia = data.metricas.firstOrNull { m -> 
                             val t = m.tipo?.uppercase()?.trim()
                             t == "FRECUENCIA" || t == "HEART_RATE" || t == "RITMO" || t == "FRECUENCIA_CARDIACA"
                         },
-                        ultimoPeso = sortedMetricas.firstOrNull { m -> 
+                        ultimoPeso = data.metricas.firstOrNull { m -> 
                             val t = m.tipo?.uppercase()?.trim()
                             t == "PESO" || t == "WEIGHT"
                         }
@@ -125,6 +144,36 @@ class DashboardViewModel : ViewModel() {
                         error = e.message ?: "Error al cargar datos"
                     )
                 }
+            }
+        }
+    }
+
+    fun marcarNotificacionesComoLeidas(userId: String) {
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val snapshot = db.collection("notificaciones")
+                        .whereEqualTo("usuarioId", userId)
+                        .whereEqualTo("leida", false)
+                        .get()
+                        .await()
+                    
+                    if (!snapshot.isEmpty) {
+                        val batch = db.batch()
+                        snapshot.documents.forEach { doc ->
+                            batch.update(doc.reference, "leida", true)
+                        }
+                        batch.commit().await()
+                    }
+                }
+                _state.update { state ->
+                    state.copy(
+                        notificaciones = state.notificaciones.map { it.copy(leida = true) }.toImmutableList(),
+                        notificacionesNoLeidas = 0
+                    )
+                }
+            } catch (e: Exception) {
+                // Silenciosamente ignorar error de actualización de UI
             }
         }
     }

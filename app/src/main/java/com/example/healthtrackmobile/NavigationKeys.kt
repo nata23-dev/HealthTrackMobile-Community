@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class MisMedicamentos(val userId: String) : NavKey
 @Serializable data class MetasDeSalud(val userId: String) : NavKey
 @Serializable data class ReportesGenerales(val userId: String) : NavKey
+@Serializable data class TendenciasDeSalud(val userId: String) : NavKey
 
 // Nuevas claves para Navegación Mobile-First
 @Serializable data object InicioTab : NavKey
